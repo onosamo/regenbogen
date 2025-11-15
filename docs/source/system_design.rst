@@ -1,4 +1,4 @@
-⚙️ System Design — Foundation Principles
+System Design — Foundation Principles
 ========================================
 
 This section outlines the foundational principles that guide the architecture and design of 🌈 regenbogen 🌈. These principles ensure modularity, flexibility, and ease of use while supporting both classical and deep learning approaches to 3D perception.
