@@ -3,9 +3,7 @@
 
 A framework for 3D perception pipelines.
 
-Welcome to 🌈 regenbogen 🌈's documentation! This project provides tools and utilities
-for building 3D perception pipelines with a focus on pose estimation and spatial
-understanding.
+This project provides tools and utilities for building 3D perception pipelines.
 
 Features
 --------
@@ -37,7 +35,7 @@ Currently, 🌈 regenbogen 🌈 is in development. To install from source:
 
    git clone git@github.com:onosamo/regenbogen.git
    cd regenbogen
-   pip install -e .
+   uv sync --group full
 
 Quick Start
 ===========

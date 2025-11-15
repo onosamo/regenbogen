@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath("../../"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "🌈 regenbogen 🌈"
-copyright = "2025, Theo Chervinskii"
+copyright = "2025, onosamo"
 author = "Theo Chervinskii"
 release = "0.1.0"
 version = "0.1.0"
@@ -35,20 +35,19 @@ language = "en"
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "alabaster"
+html_theme = "furo"
 html_static_path = ["_static"]
 
-# Theme options for alabaster
+# Theme options for Furo
 html_theme_options = {
-    "github_user": "fedor-chervinskii",
-    "github_repo": "regenbogen",
-    "github_banner": True,
-    "github_type": "star",
-    "show_powered_by": False,
-    "sidebar_width": "230px",
-    "page_width": "1024px",
-    "description": "Framework for 3D perception pipelines",
+    "source_repository": "https://github.com/onosamo/regenbogen/",
+    "source_branch": "main",
+    "source_directory": "docs/source/",
+    "sidebar_hide_name": False,
+    "navigation_with_keys": True,
 }
+
+html_title = "🌈 regenbogen 🌈"
 
 # -- Options for autodoc ----------------------------------------------------
 autodoc_default_options = {
