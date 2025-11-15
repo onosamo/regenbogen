@@ -47,6 +47,8 @@ dev = [
     "isort",
     "flake8",
     "ruff>=0.14.1",
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.0.0",
 ]
 full = [
     "open3d>=0.15.0",
