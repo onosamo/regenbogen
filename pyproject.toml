@@ -1,0 +1,116 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools-scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "regenbogen"
+version = "0.1.0"
+authors = [
+    {name = "Theo Chervinskii"},
+]
+description = "Framework for 3D perception pipelines"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["3d", "perception", "computer-vision", "depth-estimation", "object-detection", "pose-estimation"]
+dependencies = [
+    "numpy>=1.20.0",
+    "scipy>=1.7.0",
+    "rerun-sdk>=0.15.0",
+    "platformdirs>=3.0.0",
+    "tqdm>=4.60.0",
+    "huggingface-hub>=0.16.0",
+    # Use standard pyrender - will configure for macOS compatibility in renderer
+    "pyrender>=0.1.45",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov",
+    "black",
+    "isort",
+    "flake8",
+    "ruff>=0.14.1",
+]
+full = [
+    "open3d>=0.15.0",
+    "opencv-python>=4.5.0",
+    "torch>=1.9.0",
+    "torchvision>=0.10.0",
+    "ultralytics>=8.0.0",  # For YOLOv8
+    "transformers>=4.56.0",  # For Depth Anything V2, SAM2, and Dinov2
+    "Pillow>=8.0.0",  # For image processing
+    "scikit-learn>=0.24.0",  # For feature visualization (PCA)
+    # Rendering dependencies
+    "pyopengl>=3.1.0",
+    "pyopengl-accelerate>=3.1.0",
+    "networkx>=2.5",  # Override old networkx from pyrender
+]
+
+
+[project.urls]
+Homepage = "https://github.com/onosamo/regenbogen"
+Repository = "https://github.com/onosamo/regenbogen"
+Documentation = "https://github.com/onosamo/regenbogen/tree/main/docs"
+Issues = "https://github.com/onosamo/regenbogen/issues"
+
+[project.scripts]
+regenbogen-example = "examples.complete_pipeline_example:run_complete_pipeline_example"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["regenbogen*"]
+exclude = ["tests*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+addopts = "-v"
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "N",  # pep8-naming
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "N806",  # variable names should be lowercase (allow single capitals for math)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["regenbogen"]
