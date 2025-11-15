@@ -24,7 +24,6 @@ Getting Started
 
    installation
    quickstart
-   tutorial
    nodes
    system_design
    api
