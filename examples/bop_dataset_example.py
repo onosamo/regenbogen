@@ -44,9 +44,9 @@ def main():
     )
     parser.add_argument(
         "--dataset-name",
-        default="ycbv",
+        default="tless",
         choices=["ycbv", "tless", "lm", "lmo", "hb", "icbin", "itodd", "tudl", "tyol"],
-        help="BOP dataset name (default: ycbv)",
+        help="BOP dataset name (default: tless)",
     )
     parser.add_argument(
         "--split",
@@ -55,7 +55,7 @@ def main():
         help="Dataset split (default: test)",
     )
     parser.add_argument(
-        "--scene-id", type=int, default=0, help="Scene ID to visualize (default: 0)"
+        "--scene-id", type=int, default=2, help="Scene ID to visualize (default: 2)"
     )
     parser.add_argument(
         "--max-samples",
