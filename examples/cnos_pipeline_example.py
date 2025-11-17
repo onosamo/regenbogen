@@ -73,7 +73,7 @@ def run_cnos_pipeline(
     image_id: int | None = None,
     confidence_threshold: float = 0.5,
     template_cache_dir: str | None = None,
-    device: str = "cuda",
+    device: str = None,
     enable_rerun: bool = True,
 ) -> None:
     """
@@ -224,7 +224,7 @@ def main():
     parser.add_argument("--image-id", type=int, help="Image ID")
     parser.add_argument("--confidence", type=float, default=0.5, help="Confidence threshold")
     parser.add_argument("--template-cache", type=str, default="/tmp/cnos_templates", help="Template cache directory")
-    parser.add_argument("--device", type=str, default="cuda", help="Device")
+    parser.add_argument("--device", type=str, default=None, help="Device")
     parser.add_argument("--no-rerun", action="store_true", help="Disable Rerun visualization")
 
     args = parser.parse_args()

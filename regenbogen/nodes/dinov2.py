@@ -334,7 +334,7 @@ class Dinov2Node(Node):
         Returns:
             Features object with batch of embeddings (N, feature_dim) where N is number of masks
         """
-        self._load_model()
+        self._initialize_model()
 
         if len(masks.masks) == 0:
             # Return empty features
