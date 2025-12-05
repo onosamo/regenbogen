@@ -95,17 +95,10 @@ class DepthAnything3Node(Node):
         self.process_res_method = process_res_method
         self.device = device
 
-        # Sliding window buffer for multi-view processing
         self.frame_buffer: list[Frame] = []
 
-        # Track previous poses to maintain consistent global coordinate frame
-        self.previous_poses: list[np.ndarray] | None = None  # Previous window's poses
-        self.overlap_index: int = 0  # Index of overlapping frame in new buffer
-        self.global_transform: np.ndarray = np.eye(
-            4, dtype=np.float64
-        )  # Accumulated transform
+        self.previous_poses: list[np.ndarray] | None = None
 
-        # Model will be loaded lazily on first use
         self.model = None
 
     def _initialize_model(self):
@@ -114,8 +107,6 @@ class DepthAnything3Node(Node):
             return
 
         try:
-            # Import here to avoid requiring DA3 for other nodes
-            # Check if DA3 is available
             try:
                 from depth_anything_3.api import DepthAnything3
             except ImportError as e:
@@ -145,7 +136,7 @@ class DepthAnything3Node(Node):
             logger.error(f"Failed to load Depth Anything V3 model: {e}")
             raise
 
-    def process(self, frame: Frame) -> Frame:
+    def process(self, frame: Frame) -> list[Frame] | None:
         """
         Process a single frame with sliding window.
 
@@ -155,17 +146,14 @@ class DepthAnything3Node(Node):
         Returns:
             Frame with depth, extrinsics, intrinsics, and metadata
         """
-        # Lazy model initialization
         if self.model is None:
             self._initialize_model()
 
         if frame.rgb is None:
             raise ValueError("Frame must contain an RGB image")
 
-        # Add to buffer
         self.frame_buffer.append(frame)
 
-        # Process when buffer is full
         if len(self.frame_buffer) >= self.buffer_size:
             output_frames = self._process_buffer()
 
@@ -181,7 +169,7 @@ class DepthAnything3Node(Node):
             )
             return None
 
-    def _process_buffer(self) -> Frame:
+    def _process_buffer(self) -> list[Frame]:
         """Process the frame buffer with DA3."""
         import torch
 

@@ -180,11 +180,10 @@ class Pipeline:
                 if self.enable_rerun_logging:
                     if hasattr(current_data, "rgb"):
                         self.rerun_logger.log_frame(current_data, "frame")
-                    logger.debug(f"logging a buffer, frame ids: {[f.idx for f in current_data]}")
-                    # if output is an iterable of frames (buffer):
                     if hasattr(current_data, "__iter__") and not isinstance(
                         current_data, (str, bytes)
                     ):
+                        logger.debug(f"logging a buffer, frame ids: {[f.idx for f in current_data]}")
                         for f in current_data:
                             if hasattr(f, "rgb"):
                                 self.rerun_logger.log_frame(f, "frame")

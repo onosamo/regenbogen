@@ -20,7 +20,7 @@ REQUIREMENTS:
 
         uv pip install --no-deps git+https://github.com/fedor-chervinskii/Depth-Anything-3.git
 
-    The fork makes pycolmap and optional (only needed for COLMAP export).
+    The fork makes pycolmap optional (only needed for COLMAP export).
 """
 
 import rerun as rr
@@ -72,7 +72,6 @@ def main(
             buffer_size=buffer_size,
             buffer_step=buffer_step,
             estimate_poses=True,
-            use_pose_conditioning=True,
             name="DA3",
         )
     )
