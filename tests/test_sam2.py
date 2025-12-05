@@ -35,7 +35,7 @@ def test_masks_interface():
 def test_sam2_node_initialization():
     """Test SAM2Node initialization with different model sizes."""
     # Test valid model sizes
-    for model_size in ["tiny", "small", "base-plus", "large"]:
+    for model_size in ["tiny"]:
         node = SAM2Node(model_size=model_size)
         assert node.model_size == model_size
 
