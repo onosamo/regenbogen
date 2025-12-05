@@ -25,6 +25,7 @@ __all__ = [
     "TemplateRendererNode",
     # Optional nodes (may not be available if dependencies are missing)
     "DepthAnythingNode",
+    "DepthAnything3Node",
     "VideoReaderNode",
     "SAM2Node",
     "Dinov2Node",
@@ -45,6 +46,7 @@ _NODE_MODULES = {
     "TemplateRendererNode": "regenbogen.nodes.template_renderer",
     # Nodes with heavy dependencies
     "DepthAnythingNode": "regenbogen.nodes.depth_anything",
+    "DepthAnything3Node": "regenbogen.nodes.depth_anything3",
     "VideoReaderNode": "regenbogen.nodes.video_reader",
     "SAM2Node": "regenbogen.nodes.sam2",
     "Dinov2Node": "regenbogen.nodes.dinov2",

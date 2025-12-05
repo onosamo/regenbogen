@@ -12,6 +12,7 @@ from ..core.node import Node
 from ..utils.rerun_logger import RerunLogger
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class Pipeline:
@@ -163,7 +164,6 @@ class Pipeline:
             if self.enable_rerun_logging:
                 self.log_pipeline_graph("pipeline/structure")
                 self.rerun_logger.set_time_sequence("frame", item_index)
-                # Log input frame using simple entity path
                 self.rerun_logger.log_frame(current_data, "frame")
 
             # Process through remaining nodes sequentially
@@ -173,9 +173,21 @@ class Pipeline:
                 )
                 current_data = node(current_data)
 
-                # Log results after each processing step using the same simple entity path
-                if self.enable_rerun_logging and hasattr(current_data, "rgb"):
-                    self.rerun_logger.log_frame(current_data, "frame")
+                if current_data is None:
+                    logger.debug(f"Node {node.name} skipped frame (returned None)")
+                    break
+
+                if self.enable_rerun_logging:
+                    if hasattr(current_data, "rgb"):
+                        self.rerun_logger.log_frame(current_data, "frame")
+                    logger.debug(f"logging a buffer, frame ids: {[f.idx for f in current_data]}")
+                    # if output is an iterable of frames (buffer):
+                    if hasattr(current_data, "__iter__") and not isinstance(
+                        current_data, (str, bytes)
+                    ):
+                        for f in current_data:
+                            if hasattr(f, "rgb"):
+                                self.rerun_logger.log_frame(f, "frame")
 
             item_runtime = time.time() - start_time
             logger.debug(

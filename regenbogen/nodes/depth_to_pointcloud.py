@@ -4,6 +4,9 @@ Depth to pointcloud conversion node.
 This node converts depth images and camera intrinsics to 3D pointclouds.
 """
 
+from collections.abc import Generator
+
+import cv2
 import numpy as np
 
 from ..core.node import Node
@@ -30,15 +33,38 @@ class DepthToPointCloudNode(Node):
         self.max_depth = max_depth
         self.min_depth = min_depth
 
-    def process(self, frame: Frame) -> Frame:
+    def process(
+        self, frame: Frame | list[Frame] | Generator[Frame, None, None]
+    ) -> Frame | list[Frame] | Generator[Frame, None, None]:
         """
-        Convert depth image to pointcloud.
+        Convert depth image(s) to pointcloud(s).
+
+        Args:
+            frame: Input frame, list of frames, or generator of frames with depth image and intrinsics
+
+        Returns:
+            Frame, list of frames, or generator of frames with pointcloud added and colors stored in metadata
+        """
+        # Handle generator
+        if hasattr(frame, "__iter__") and hasattr(frame, "__next__"):
+            return (self._process_single_frame(f) for f in frame)
+
+        # Handle list of frames
+        if isinstance(frame, list):
+            return [self._process_single_frame(f) for f in frame]
+
+        # Handle single frame
+        return self._process_single_frame(frame)
+
+    def _process_single_frame(self, frame: Frame) -> Frame:
+        """
+        Process a single frame to convert depth to pointcloud.
 
         Args:
             frame: Input frame with depth image and intrinsics
 
         Returns:
-            Frame with pointcloud added
+            Frame with pointcloud added and colors stored in metadata
         """
         if frame.depth is None:
             raise ValueError("Input frame must contain depth image")
@@ -54,25 +80,20 @@ class DepthToPointCloudNode(Node):
         else:
             intrinsics = frame.intrinsics
 
-        # Generate pointcloud
-        pointcloud = self._depth_to_pointcloud(frame.depth, intrinsics)
-
-        # Create output frame
-        output_frame = Frame(
-            rgb=frame.rgb,
-            depth=frame.depth,
-            intrinsics=intrinsics,
-            extrinsics=frame.extrinsics,
-            pointcloud=pointcloud,
-            metadata=frame.metadata.copy() if frame.metadata else {},
+        # Generate pointcloud with colors
+        pointcloud, colors = self._depth_to_pointcloud_with_colors(
+            frame.depth, intrinsics, frame.rgb
         )
 
-        output_frame.metadata["pointcloud_method"] = "depth_unprojection"
-        output_frame.metadata["pointcloud_size"] = (
+        frame.pointcloud = pointcloud
+
+        frame.metadata["pointcloud_method"] = "depth_unprojection"
+        frame.metadata["pointcloud_size"] = (
             len(pointcloud) if pointcloud is not None else 0
         )
+        frame.metadata["pointcloud_colors"] = colors
 
-        return output_frame
+        return frame
 
     def _depth_to_pointcloud(
         self, depth: np.ndarray, intrinsics: np.ndarray
@@ -121,3 +142,70 @@ class DepthToPointCloudNode(Node):
         pointcloud = np.stack([x, y, z], axis=1).astype(np.float32)
 
         return pointcloud
+
+    def _depth_to_pointcloud_with_colors(
+        self, depth: np.ndarray, intrinsics: np.ndarray, rgb: np.ndarray | None = None
+    ) -> tuple[np.ndarray, np.ndarray | None]:
+        """
+        Convert depth image to 3D pointcloud with colors from RGB image.
+
+        Args:
+            depth: Depth image (H, W)
+            intrinsics: Camera intrinsics matrix (3, 3)
+            rgb: RGB image (H', W', 3) - may have different size than depth
+
+        Returns:
+            Tuple of (pointcloud array (N, 3), colors array (N, 3) or None)
+        """
+        h, w = depth.shape
+
+        # Extract intrinsic parameters
+        fx = intrinsics[0, 0]
+        fy = intrinsics[1, 1]
+        cx = intrinsics[0, 2]
+        cy = intrinsics[1, 2]
+
+        # Create pixel coordinate grids
+        u, v = np.meshgrid(np.arange(w), np.arange(h))
+
+        # Flatten arrays
+        u_flat = u.flatten()
+        v_flat = v.flatten()
+        depth_flat = depth.flatten()
+
+        # Handle RGB colors if provided
+        colors = None
+        if rgb is not None:
+            rgb_h, rgb_w = rgb.shape[:2]
+
+            # Resize RGB to match depth if needed
+            if (rgb_h, rgb_w) != (h, w):
+                rgb_resized = cv2.resize(rgb, (w, h), interpolation=cv2.INTER_LINEAR)
+            else:
+                rgb_resized = rgb
+
+            # Flatten RGB
+            rgb_flat = rgb_resized.reshape(-1, 3)
+
+        # Filter valid depths
+        valid_mask = (depth_flat > self.min_depth) & (depth_flat < self.max_depth)
+        u_valid = u_flat[valid_mask]
+        v_valid = v_flat[valid_mask]
+        depth_valid = depth_flat[valid_mask]
+
+        if len(depth_valid) == 0:
+            return np.array([]).reshape(0, 3), None
+
+        # Unproject to 3D coordinates
+        x = (u_valid - cx) * depth_valid / fx
+        y = (v_valid - cy) * depth_valid / fy
+        z = depth_valid
+
+        # Stack into pointcloud
+        pointcloud = np.stack([x, y, z], axis=1).astype(np.float32)
+
+        # Extract colors for valid points
+        if rgb is not None:
+            colors = rgb_flat[valid_mask]
+
+        return pointcloud, colors
