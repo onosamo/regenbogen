@@ -69,7 +69,6 @@ class DepthAnything3Node(Node):
             buffer_step: Number of frames to shift buffer each step (1 for sliding window).
                         If negative -N, uses buffer_size - N (e.g., -1 means shift by buffer_size-1)
             estimate_poses: Estimate camera poses from images
-            use_pose_conditioning: Use estimated/provided poses to condition depth
             process_res: Processing resolution
             process_res_method: Resize method ("upper_bound_resize", "lower_bound_resize")
             name: Node name
