@@ -93,6 +93,10 @@ class RerunLogger:
 
         self._ensure_initialized()
 
+        # support global frame indexing
+        if frame.idx is not None:
+            rr.set_time(entity_path, sequence=frame.idx)
+
         # Log RGB image
         if frame.rgb is not None:
             rr.log(f"{entity_path}/rgb", rr.Image(frame.rgb))

@@ -19,6 +19,7 @@ class Frame:
 
     Attributes:
         rgb: RGB image as numpy array (H, W, 3)
+        idx: Optional global frame index
         depth: Depth image as numpy array (H, W) or None
         intrinsics: Camera intrinsics matrix (3, 3) or None
         extrinsics: Camera extrinsics matrix (4, 4) or None
@@ -27,6 +28,7 @@ class Frame:
     """
 
     rgb: npt.NDArray[np.uint8]
+    idx: Optional[int] = None
     depth: Optional[npt.NDArray[np.float32]] = None
     intrinsics: Optional[npt.NDArray[np.float64]] = None
     extrinsics: Optional[npt.NDArray[np.float64]] = None

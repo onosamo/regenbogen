@@ -43,14 +43,12 @@ class VideoReaderNode(Node):
 
         Args:
             video_path: Path to the video file. If None, downloads a sample video.
-            fps: Target FPS for frame extraction (None = use video's FPS)
             frame_skip: Skip every N frames (1 = process all frames)
             max_frames: Maximum number of frames to process (None = all frames)
             **kwargs: Additional configuration
         """
         super().__init__(**kwargs)
         self.video_path = video_path or self._download_sample_video()
-        self.fps = fps
         self.frame_skip = frame_skip
         self.max_frames = max_frames
 
@@ -135,6 +133,7 @@ class VideoReaderNode(Node):
         intrinsics = self._create_default_intrinsics()
 
         result_frame = Frame(
+            idx=self._processed_frames,
             rgb=rgb_frame.astype(np.uint8),
             intrinsics=intrinsics,
             metadata={
