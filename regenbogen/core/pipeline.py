@@ -9,7 +9,7 @@ import time
 from typing import Any, Iterator, List, Optional
 
 from ..core.node import Node
-from ..interfaces import Masks, Frame
+from ..interfaces import Frame, Masks
 from ..utils.rerun_logger import RerunLogger
 
 logger = logging.getLogger(__name__)
