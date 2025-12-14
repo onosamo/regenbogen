@@ -1,215 +1,141 @@
 Available Nodes
 ===============
 
-This page lists all the implemented nodes in the regenbogen framework.
+This page lists all the implemented nodes in the regenbogen framework. Each node is a self-contained processing unit that can be combined in pipelines.
 
-Core Pipeline Nodes
--------------------
+For detailed API documentation, see the :doc:`api` page.
 
-Data Loading
-~~~~~~~~~~~~
+Implemented Nodes
+-----------------
+
+Data Loading & I/O
+~~~~~~~~~~~~~~~~~~
 
 **BOPDatasetNode**
-   Loads and streams data from BOP (Benchmark for 6D Object Pose Estimation) format datasets.
+   Loads and streams data from BOP (Benchmark for 6D Object Pose Estimation) format datasets with automatic downloading.
    
-   - **Input**: None (dataset loader)
-   - **Output**: Iterator yielding (Frame, list of ground truth Poses, list of object IDs)
-   - **Parameters**: 
-     
-     - dataset_name: Name of the BOP dataset (e.g., 'ycbv', 'tless')
-     - dataset_path: Path to the BOP dataset root directory (optional, uses cache if None)
-     - split: Dataset split to use ('train' or 'test')
-     - scene_id: Specific scene ID to load (None = load all scenes)
-     - max_samples: Maximum number of samples to load (None = load all)
-     - load_depth: Whether to load depth maps
-     - load_models: Whether to load 3D object models
-     - allow_download: If True, automatically download dataset if not found
-     - download_scene_ids: List of scene IDs to download (None = all scenes)
+   - **Input**: None (source node)
+   - **Output**: ``(Frame, List[Pose], List[int])`` - Frame with ground truth poses and object IDs
+   - **Implementation**: `regenbogen/nodes/bop_dataset.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/bop_dataset.py>`_
+
+**VideoReaderNode**
+   Reads and streams frames from video files (MP4, AVI, etc.) using OpenCV.
    
-   - **Key Features**:
-     
-     - Supports standard BOP dataset format
-     - Automatic dataset downloading with caching (using platformdirs)
-     - Streams frames with ground truth poses
-     - Loads 3D object models (requires Open3D)
-     - Can get specific samples to save bandwidth/disk space
-     - Works with both OpenCV and PIL for image loading
-   
-   - **Status**: Fully implemented
+   - **Input**: None (source node)
+   - **Output**: ``Frame`` - Stream of video frames
+   - **Implementation**: `regenbogen/nodes/video_reader.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/video_reader.py>`_
 
 Depth Estimation
-~~~~~~~~~~~~~~~~~
-
-**DepthAnythingNode**
-   Converts RGB images to monocular depth estimates using the Depth Anything model.
-   
-   - **Input**: Frame with RGB image
-   - **Output**: Frame with depth map added
-   - **Parameters**: model_type, device
-   - **Status**: Placeholder implementation (generates synthetic depth)
-
-Pointcloud Processing
-~~~~~~~~~~~~~~~~~~~~~
-
-**DepthToPointCloudNode**
-   Converts depth images and camera intrinsics to 3D pointclouds.
-   
-   - **Input**: Frame with depth image and intrinsics
-   - **Output**: Frame with pointcloud added
-   - **Parameters**: max_depth, min_depth
-   - **Status**: Fully implemented
-
-**PartialPointCloudExtractionNode**
-   Extracts pointcloud regions corresponding to detected objects.
-   
-   - **Input**: Tuple of (Frame with pointcloud, BoundingBoxes with detections)
-   - **Output**: List of partial pointclouds
-   - **Parameters**: expand_factor, min_points
-   - **Status**: Fully implemented
-
-Object Detection
 ~~~~~~~~~~~~~~~~
 
+**DepthAnythingNode**
+   Monocular depth estimation using Depth Anything V1 model from HuggingFace.
+   
+   - **Input**: ``Frame`` with RGB image
+   - **Output**: ``Frame`` with depth map added
+   - **Implementation**: `regenbogen/nodes/depth_anything.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/depth_anything.py>`_
+
+**DepthAnything3Node**
+   Monocular depth estimation with visual odometry using Depth Anything V3 (fork with optional pycolmap).
+   
+   - **Input**: ``Frame`` with RGB image (or stream of frames)
+   - **Output**: ``Frame`` or ``List[Frame]`` with depth and camera poses
+   - **Implementation**: `regenbogen/nodes/depth_anything3.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/depth_anything3.py>`_
+
+Segmentation
+~~~~~~~~~~~~
+
 **SAM2Node**
-   Performs automatic instance segmentation mask generation using SAM2.
+   Automatic instance segmentation using Segment Anything Model 2 (SAM2) from Meta.
    
-   - **Input**: Frame with RGB image
-   - **Output**: Masks containing segmentation masks, bounding boxes, and scores
-   - **Parameters**: 
-     
-     - model_size: Size of the model ("tiny", "small", "base-plus", or "large")
-     - device: Device to run the model on
-     - points_per_batch: Number of points per batch for mask generation
-     - pred_iou_thresh: IoU threshold for filtering masks
-     - mask_threshold: Threshold for converting interpolated masks to boolean
-     - enable_rerun_logging: Whether to enable Rerun visualization
-     - rerun_entity_path: Base entity path for Rerun logging
-   
-   - **Key Features**:
-     
-     - Automatic mask generation for all objects in image
-     - Multiple candidate masks with confidence scores
-     - Bounding box extraction from masks
-     - Integrated Rerun logging for visualization
-   
-   - **Status**: Fully implemented
+   - **Input**: ``Frame`` with RGB image (or tuple from dataset loader)
+   - **Output**: ``Masks`` with segmentation masks, bounding boxes, and confidence scores
+   - **Implementation**: `regenbogen/nodes/sam2.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/sam2.py>`_
 
 Feature Extraction
 ~~~~~~~~~~~~~~~~~~
 
 **Dinov2Node**
-   Computes dense feature descriptors from RGB images using Dinov2 vision transformer.
+   Dense feature extraction using DINOv2 vision transformer with patch-level and global descriptors.
    
-   - **Input**: Frame with RGB image
-   - **Output**: Features containing descriptors and optional embeddings
-   - **Parameters**:
-     
-     - model_size: Size of the model ("small", "base", "large", or "giant")
-     - device: Device to run the model on
-     - output_type: Type of features ("patch" for dense features, "cls" for global, "both")
-     - enable_rerun_logging: Whether to enable Rerun visualization
-     - rerun_entity_path: Base entity path for Rerun logging
-   
-   - **Key Features**:
-     
-     - Dense patch-level feature descriptors (14x14 pixel patches)
-     - Global image embeddings via CLS token
-     - Self-supervised features suitable for various downstream tasks
-     - PCA visualization of feature maps in Rerun
-     - Integrated Rerun logging with feature statistics
-   
-   - **Status**: Fully implemented
+   - **Input**: ``Frame`` with RGB image
+   - **Output**: ``Features`` with dense or global feature descriptors
+   - **Implementation**: `regenbogen/nodes/dinov2.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/dinov2.py>`_
 
-Mesh Processing
-~~~~~~~~~~~~~~~
+**TemplateDescriptorNode**
+   Extracts and manages descriptors from template images for CNOS-style matching.
+   
+   - **Input**: ``Frame`` with templates
+   - **Output**: ``Features`` with template descriptors
+   - **Implementation**: `regenbogen/nodes/template_descriptor.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/template_descriptor.py>`_
+
+Point Cloud Processing
+~~~~~~~~~~~~~~~~~~~~~~
+
+**DepthToPointCloudNode**
+   Converts depth images and camera intrinsics to 3D point clouds.
+   
+   - **Input**: ``Frame`` with depth and intrinsics (or stream/list of frames)
+   - **Output**: ``Frame`` with point cloud and colors added
+   - **Implementation**: `regenbogen/nodes/depth_to_pointcloud.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/depth_to_pointcloud.py>`_
+
+**PartialPointCloudExtractionNode**
+   Extracts point cloud regions corresponding to detected objects using bounding boxes.
+   
+   - **Input**: ``(Frame, BoundingBoxes)`` - Frame with point cloud and object detections
+   - **Output**: ``List[Frame]`` with partial point clouds per object
+   - **Implementation**: `regenbogen/nodes/partial_pointcloud_extraction.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/partial_pointcloud_extraction.py>`_
 
 **MeshSamplingNode**
-   Samples points from 3D meshes to create reference pointclouds.
+   Samples points from 3D mesh models to create reference point clouds.
    
-   - **Input**: ObjectModel with mesh
-   - **Output**: ObjectModel with sampled pointcloud added
-   - **Parameters**: num_points, sampling_method, add_noise, noise_std
-   - **Status**: Fully implemented
+   - **Input**: ``ObjectModel`` with mesh data
+   - **Output**: ``ObjectModel`` with sampled point cloud added
+   - **Implementation**: `regenbogen/nodes/mesh_sampling.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/mesh_sampling.py>`_
 
-Pose Estimation
-~~~~~~~~~~~~~~~
+Pose Estimation & Refinement
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**CNOSMatcherNode**
+   CNOS-style template matching for 6D pose estimation using feature descriptors.
+   
+   - **Input**: ``(Frame, Features)`` - Query frame and template features
+   - **Output**: ``BoundingBoxes`` with detected objects and initial poses
+   - **Implementation**: `regenbogen/nodes/cnos_matcher.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/cnos_matcher.py>`_
 
 **ICPRefinementNode**
-   Refines pose estimates using ICP (Iterative Closest Point) alignment algorithms.
+   Refines pose estimates using ICP (Iterative Closest Point) alignment.
    
-   - **Input**: Tuple of (ObjectModel, scene pointcloud, initial pose)
-   - **Output**: Refined pose estimate
-   - **Parameters**: max_iterations, tolerance, max_correspondence_distance, outlier_rejection_threshold
-   - **Status**: Fully implemented
-
-Template Rendering
-~~~~~~~~~~~~~~~~~~
+   - **Input**: ``(ObjectModel, PointCloud, Pose)`` - Model, scene, and initial pose
+   - **Output**: ``Pose`` - Refined pose estimate
+   - **Implementation**: `regenbogen/nodes/icp_refinement.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/icp_refinement.py>`_
 
 **SphericalPoseGeneratorNode**
    Generates camera poses evenly distributed on a sphere around an object.
    
-   - **Input**: None (pose generator)
-   - **Output**: Iterator yielding Pose objects with camera positions on sphere
-   - **Parameters**: 
-     
-     - radius: Distance from object center to camera (in meters)
-     - num_views: Total number of views (overrides elevation_levels/azimuth_samples)
-     - elevation_levels: Number of elevation levels (latitude circles)
-     - azimuth_samples: Number of azimuth samples per elevation level
-     - inplane_rotations: Number of in-plane rotations per view
-     - look_at_center: Point to look at, default is origin [0, 0, 0]
-     - up_vector: Up vector for camera orientation, default is [0, -1, 0]
-   
-   - **Key Features**:
-     
-     - Generates evenly distributed viewpoints on a sphere
-     - Supports multiple elevation levels and azimuth samples
-     - Optional in-plane rotations for more coverage
-     - Generates proper look-at matrices for camera orientation
-     - Useful for template rendering in pose estimation pipelines
-   
-   - **Status**: Fully implemented
+   - **Input**: None (generator node)
+   - **Output**: ``Iterator[Pose]`` - Camera poses on sphere
+   - **Implementation**: `regenbogen/nodes/spherical_pose_generator.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/spherical_pose_generator.py>`_
+
+Rendering
+~~~~~~~~~
 
 **TemplateRendererNode**
-   Renders RGB-D templates from CAD models (meshes) using pyrender.
+   Renders RGB-D templates from 3D mesh models using pyrender for offline rendering.
    
-   - **Input**: Tuple of (ObjectModel with mesh, Iterator[Pose])
-   - **Output**: Iterator yielding Frame objects with rendered RGB and depth images
-   - **Parameters**:
-     
-     - width: Image width in pixels (default: 640)
-     - height: Image height in pixels (default: 480)
-     - fx, fy: Focal lengths in pixels (default: width, height)
-     - cx, cy: Principal point coordinates (default: width/2, height/2)
-     - z_near: Near clipping plane distance (default: 0.01)
-     - z_far: Far clipping plane distance (default: 10.0)
-     - ambient_light: Ambient light intensity [0, 1] (default: 0.5)
-   
-   - **Key Features**:
-     
-     - Offscreen rendering using pyrender
-     - Generates RGB-D images from mesh models
-     - Configurable camera intrinsics
-     - Outputs Frame objects with full camera parameters
-     - Useful for generating templates for CNOS and similar methods
-   
-   - **Status**: Fully implemented (requires display or EGL support)
+   - **Input**: ``(ObjectModel, Iterator[Pose])`` - Mesh and camera poses
+   - **Output**: ``Iterator[Frame]`` - Rendered RGB-D frames
+   - **Implementation**: `regenbogen/nodes/template_renderer.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/template_renderer.py>`_
 
-Implementation Status
----------------------
+Evaluation
+~~~~~~~~~~
 
-**Fully Implemented**
-   - BOPDatasetNode
-   - DepthToPointCloudNode
-   - PartialPointCloudExtractionNode  
-   - MeshSamplingNode
-   - ICPRefinementNode
-   - DepthAnythingNode
-   - SAM2Node
-   - Dinov2Node
-   - VideoReaderNode
-   - SphericalPoseGeneratorNode
-   - TemplateRendererNode
+**RMSEEvaluationNode**
+   Evaluates pose estimation accuracy using RMSE metrics.
+   
+   - **Input**: ``(List[Pose], List[Pose])`` - Predicted and ground truth poses
+   - **Output**: ``ErrorMetrics`` with RMSE statistics
+   - **Implementation**: `regenbogen/nodes/rmse_evaluation.py <https://github.com/onosamo/regenbogen/blob/main/regenbogen/nodes/rmse_evaluation.py>`_
 
 Usage Examples
 --------------
@@ -328,38 +254,3 @@ Template Rendering
        # Save or use templates for pose estimation
 
 For complete examples, see the `examples/` directory in the repository.
-Feature Extraction with Dinov2
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from regenbogen.nodes import Dinov2Node
-   from regenbogen.interfaces import Frame
-   import numpy as np
-   
-   # Create Dinov2 node for dense feature extraction
-   dinov2 = Dinov2Node(
-       model_size="small",
-       device="cuda",
-       output_type="patch",  # Dense patch features
-       enable_rerun_logging=True
-   )
-   
-   # Process RGB frame
-   rgb = np.random.randint(0, 256, (480, 640, 3), dtype=np.uint8)
-   frame = Frame(rgb=rgb)
-   
-   # Extract features
-   features = dinov2.process(frame)
-   print(f"Descriptors shape: {features.descriptors.shape}")  # (num_patches, feature_dim)
-   print(f"Feature dimension: {features.metadata['feature_dim']}")
-   print(f"Number of patches: {features.metadata['num_patches']}")
-   
-   # Get global image embedding instead
-   dinov2_global = Dinov2Node(
-       model_size="small",
-       device="cuda",
-       output_type="cls"  # Global CLS token
-   )
-   features_global = dinov2_global.process(frame)
-   print(f"Global embedding shape: {features_global.descriptors.shape}")  # (feature_dim,)

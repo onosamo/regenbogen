@@ -13,6 +13,8 @@ Each node:
 * has inputs (well-defined interfaces, e.g. ``Frame``, ``ObjectModel``, ``Features``, ``Pose``)
 * produces outputs (same structured interfaces)
 
+Standard ``Frame`` interface carries RGB, depth, intrinsics/extrinsics, pointcloud and segmentation masks.
+
 This makes it easy to swap nodes, reuse them, or combine classical and deep-learning approaches.
 
 **Benefits:**
@@ -42,7 +44,7 @@ Interfaces are serializable (NumPy, Torch tensors, JSON metadata) so nodes don't
 * **Testability**: Each interface can be mocked and tested in isolation
 * **Serialization**: Data can be saved, loaded, and transferred between systems
 
-3. Two Execution Backends
+3. [Future] Two Execution Backends
 --------------------------
 
 **Python nodes** → simple functions, run inline with dependencies (good for ICP, Open3D, lightweight ops).
@@ -93,7 +95,7 @@ Both modes reuse the same pipeline definition, only differ in input adapter.
 
 Each node can emit intermediate results (features, correspondences, pose hypotheses).
 
-Visualization layer integrates with tools like `Rerun <https://rerun.io>`_ or Open3D for interactive inspection.
+Base pipeline class natively integrates with `Rerun <https://rerun.io>`_ for interactive inspection.
 
 Debugging = first-class: the framework is not just for final inference, but also for understanding and comparing methods.
 
@@ -142,9 +144,6 @@ Nodes are pluggable → can be replaced, reordered, or benchmarked independently
 Pipelines are defined directly in Python (instead of static YAML) →
 
 * IDE support, type hints, breakpoints, dynamic graphs
-* But still possible to export/import configs (YAML/JSON) for reproducibility
-
-Benchmarking node outputs is possible with a standard ``Evaluator`` node (wrapping BOP toolkit).
 
 **Development Experience:**
 
@@ -153,12 +152,11 @@ Benchmarking node outputs is possible with a standard ``Evaluator`` node (wrappi
 * **Dynamic Configuration**: Programmatic pipeline construction
 * **Interactive Development**: Jupyter notebook support
 
-**Reproducibility Features:**
+**[Future] Reproducibility Features:**
 
 * **Config Export**: Save pipeline configurations as YAML/JSON
 * **Deterministic Execution**: Seeded random number generation
 * **Environment Capture**: Docker images for exact environment reproduction
-* **Version Tracking**: Git integration for code and data versioning
 
 **Benchmarking Support:**
 
@@ -166,61 +164,5 @@ Benchmarking node outputs is possible with a standard ``Evaluator`` node (wrappi
 * **Custom Metrics**: Define domain-specific evaluation criteria
 * **Automated Testing**: Continuous integration with performance regression detection
 * **Comparative Analysis**: Built-in tools for method comparison
-
-8. Minimal Working Example
----------------------------
-
-A simple reference pipeline:
-
-1. **Extract object features**
-2. **Extract scene features**
-3. **Match & register**
-4. **Refine with ICP**
-5. **Evaluate**
-
-.. code-block:: python
-
-   from regenbogen import Pipeline, Node
-   from regenbogen.nodes import (
-       FeatureExtractor, 
-       Matcher, 
-       PoseEstimator, 
-       ICPRefiner, 
-       Evaluator
-   )
-   
-   # Create pipeline
-   pipeline = Pipeline()
-   
-   # Add nodes in sequence
-   pipeline.add_node(FeatureExtractor(method="sift"))
-   pipeline.add_node(Matcher(method="flann"))
-   pipeline.add_node(PoseEstimator(method="pnp_ransac"))
-   pipeline.add_node(ICPRefiner(max_iterations=100))
-   pipeline.add_node(Evaluator(metrics=["add", "add_s"]))
-   
-   # Process single frame
-   result = pipeline.process(input_frame)
-   
-   # Or process dataset
-   results = pipeline.process_dataset(dataset_path)
-
-This example demonstrates the key principles in action:
-
-* **Modular Design**: Each step is a separate, replaceable node
-* **Clear Interfaces**: Data flows through standardized formats
-* **Flexibility**: Easy to swap algorithms (e.g., change "sift" to "superpoint")
-* **Evaluation**: Built-in support for standard metrics
-
-Getting Started
----------------
-
-To begin implementing pipelines with these principles:
-
-1. **Define your interfaces** - Start with the data structures your pipeline needs
-2. **Implement core nodes** - Create basic building blocks following interface contracts
-3. **Build simple pipelines** - Start with linear sequences before complex DAGs
-4. **Add visualization** - Integrate debugging and inspection early
-5. **Benchmark and iterate** - Use evaluation nodes to measure and improve performance
 
 For detailed implementation examples, see the :doc:`quickstart` guide and :doc:`api` reference.

@@ -9,6 +9,7 @@ import time
 from typing import Any, Iterator, List, Optional
 
 from ..core.node import Node
+from ..interfaces import Frame, Masks
 from ..utils.rerun_logger import RerunLogger
 
 logger = logging.getLogger(__name__)
@@ -97,13 +98,15 @@ class Pipeline:
         # Process through each node sequentially
         for i, node in enumerate(self.nodes):
             logger.debug(f"Processing node {i + 1}/{len(self.nodes)}: {node.name}")
-            current_data = node(current_data)
+            current_data = node.process(current_data)
 
             # Log intermediate results if Rerun logging is enabled
             if self.enable_rerun_logging:
                 self.rerun_logger.set_time_sequence("frame", i + 1)
-                if hasattr(current_data, "rgb"):
+                if isinstance(current_data, Frame):
                     self.rerun_logger.log_frame(current_data, "frame")
+                elif isinstance(current_data, Masks):
+                    self.rerun_logger.log_masks(current_data, f"{node.name}/masks")
 
         total_runtime = time.time() - start_time
         logger.info(f"Pipeline {self.name} completed in {total_runtime:.3f}s")
@@ -148,7 +151,7 @@ class Pipeline:
         remaining_nodes = self.nodes[1:]
 
         # Process the first node to get the stream
-        stream = first_node(input_data)
+        stream = first_node.process(input_data)
 
         if not hasattr(stream, "__iter__"):
             raise ValueError(
@@ -164,28 +167,35 @@ class Pipeline:
             if self.enable_rerun_logging:
                 self.log_pipeline_graph("pipeline/structure")
                 self.rerun_logger.set_time_sequence("frame", item_index)
-                self.rerun_logger.log_frame(current_data, "frame")
+                # Handle tuple output from dataset loaders (Frame, ground_truth, obj_ids)
+                if isinstance(current_data, tuple) and len(current_data) > 0:
+                    if isinstance(current_data[0], Frame):
+                        self.rerun_logger.log_frame(current_data[0], "frame")
+                elif isinstance(current_data, Frame):
+                    self.rerun_logger.log_frame(current_data, "frame")
 
             # Process through remaining nodes sequentially
             for i, node in enumerate(remaining_nodes):
                 logger.debug(
                     f"Processing item {item_index + 1}, node {i + 2}/{len(self.nodes)}: {node.name}"
                 )
-                current_data = node(current_data)
+                current_data = node.process(current_data)
 
                 if current_data is None:
                     logger.debug(f"Node {node.name} skipped frame (returned None)")
                     break
 
                 if self.enable_rerun_logging:
-                    if hasattr(current_data, "rgb"):
+                    if isinstance(current_data, Frame):
                         self.rerun_logger.log_frame(current_data, "frame")
-                    if hasattr(current_data, "__iter__") and not isinstance(
+                    elif isinstance(current_data, Masks):
+                        self.rerun_logger.log_masks(current_data, f"{node.name}/masks")
+                    elif hasattr(current_data, "__iter__") and not isinstance(
                         current_data, (str, bytes)
                     ):
                         logger.debug(f"logging a buffer, frame ids: {[f.idx for f in current_data]}")
                         for f in current_data:
-                            if hasattr(f, "rgb"):
+                            if isinstance(f, Frame):
                                 self.rerun_logger.log_frame(f, "frame")
 
             item_runtime = time.time() - start_time

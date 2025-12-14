@@ -110,7 +110,7 @@ class Node(ABC):
                 return model
     """
 
-    def __init__(self, name: str = None, **kwargs):
+    def __init__(self, name: str | None = None, **kwargs):
         """
         Initialize the node.
 
