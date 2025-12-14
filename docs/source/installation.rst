@@ -29,7 +29,7 @@ To install 🌈 regenbogen 🌈 from the source code using uv (recommended):
 
    git clone git@github.com:onosamo/regenbogen.git
    cd regenbogen
-   uv pip install -e .
+   uv sync --group full
 
 Alternative: Install with pip
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,34 +42,12 @@ If you prefer using pip:
    cd regenbogen
    pip install -e .
 
-Development Installation
-------------------------
-
-For development, install with additional dependencies using uv:
-
-.. code-block:: bash
-
-   git clone git@github.com:onosamo/regenbogen.git
-   cd regenbogen
-   uv pip install -e ".[dev]"
-
-Or with pip:
-
-.. code-block:: bash
-
-   git clone git@github.com:onosamo/regenbogen.git
-   cd regenbogen
-   pip install -e ".[dev]"
-
 Verification
 ------------
 
 To verify your installation, you can run:
 
-.. code-block:: python
+.. code-block:: bash
 
-   import regenbogen
-   print(regenbogen.__version__)
+   uv run python examples/video_processing_demo.py
 
-Note: The package is currently in development, so these instructions
-will be updated as the project evolves.

@@ -34,8 +34,6 @@ class SAM2Node(Node):
     - sam2-hiera-large
 
     Larger models provide better accuracy but are slower and use more memory.
-
-    Note: This node requires transformers >= 4.56.0 for SAM2 support.
     """
 
     def __init__(
@@ -45,9 +43,7 @@ class SAM2Node(Node):
         points_per_batch: int = 64,
         pred_iou_thresh: float = 0.7,
         mask_threshold: float = 0.5,
-        enable_rerun_logging: bool = True,
-        rerun_entity_path: str = "sam2",
-        name: str = None,
+        name: str | None = None,
         **kwargs,
     ):
         """
@@ -59,8 +55,6 @@ class SAM2Node(Node):
             points_per_batch: Number of points per batch for mask generation (will use closest perfect square)
             pred_iou_thresh: IoU threshold for filtering masks
             mask_threshold: Threshold for converting interpolated masks to boolean (default: 0.5)
-            enable_rerun_logging: Whether to enable Rerun visualization logging
-            rerun_entity_path: Base entity path for Rerun logging
             name: Optional name for the node
             **kwargs: Additional configuration parameters
         """
@@ -70,22 +64,8 @@ class SAM2Node(Node):
         self.points_per_batch = points_per_batch
         self.pred_iou_thresh = pred_iou_thresh
         self.mask_threshold = mask_threshold
-        self.enable_rerun_logging = enable_rerun_logging
-        self.rerun_entity_path = rerun_entity_path
         self.model = None
         self.processor = None
-        self._frame_counter = 0
-
-        # Initialize Rerun logger if enabled
-        self.rerun_logger = None
-        if enable_rerun_logging:
-            from ..utils.rerun_logger import RerunLogger
-
-            self.rerun_logger = RerunLogger(
-                recording_name="SAM2",
-                enabled=True,
-                spawn=True,
-            )
 
         self._initialize_model()
 
@@ -108,9 +88,9 @@ class SAM2Node(Node):
         model_name = model_name_map[self.model_size]
 
         if self.device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
-            device = self.device
+            device = torch.device(self.device)
 
         logger.info(f"Loading SAM2 model: {model_name}")
         logger.info(f"Device: {device}")
@@ -134,9 +114,8 @@ class SAM2Node(Node):
             # The warning is harmless - the models are compatible and work correctly for image tasks.
             # The proper fix would be for Meta/HuggingFace to provide separate checkpoints with
             # Sam2Config, or to unify the config types in the transformers library.
-            self.model = Sam2Model.from_pretrained(model_name)
+            self.model = Sam2Model.from_pretrained(model_name).to(device)
 
-            self.model = self.model.to(device)
             self.model.eval()
 
             logger.info("SAM2 model loaded successfully!")
@@ -150,7 +129,7 @@ class SAM2Node(Node):
             logger.error(f"Failed to load SAM2 model: {e}")
             raise
 
-    def process(self, frame: Frame) -> Masks:
+    def process(self, input_data: Frame | tuple) -> Masks:
         """
         Process a frame to generate instance segmentation masks.
 
@@ -158,24 +137,22 @@ class SAM2Node(Node):
         and returning multiple candidate masks with bounding boxes and confidence scores.
 
         Args:
-            frame: Input frame with RGB image
+            input_data: Input frame with RGB image, or tuple (Frame, ...) from dataset loaders
 
         Returns:
             Masks containing segmentation masks, bounding boxes, and scores
         """
+        # Handle tuple input from dataset loaders (Frame, ground_truth, obj_ids)
+        if isinstance(input_data, tuple):
+            frame = input_data[0]
+        else:
+            frame = input_data
+
         if self.model is None or self.processor is None:
             raise RuntimeError("Model not initialized. Call _initialize_model() first.")
 
         if frame.rgb is None:
             raise ValueError("Frame must contain an RGB image")
-
-        # Log frame to Rerun if enabled
-        if self.enable_rerun_logging and self.rerun_logger:
-            self.rerun_logger.set_time_sequence("frame", self._frame_counter)
-            self.rerun_logger.log_frame(
-                frame,
-                entity_path=f"{self.rerun_entity_path}/camera",
-            )
 
         rgb_image = frame.rgb
         if rgb_image.dtype != np.uint8:
@@ -292,23 +269,7 @@ class SAM2Node(Node):
                 },
             )
 
-        # Log masks to Rerun if enabled
-        if self.enable_rerun_logging and self.rerun_logger:
-            logger.info(f"Frame {self._frame_counter}: Generated {output_masks.metadata['num_masks']} masks")
-            self.rerun_logger.log_masks(output_masks, entity_path=f"{self.rerun_entity_path}/segmentation")
-
-            # Log metadata
-            self.rerun_logger.log_metadata(
-                {
-                    "frame_id": self._frame_counter,
-                    "num_masks": output_masks.metadata["num_masks"],
-                    "model": output_masks.metadata["model"],
-                },
-                entity_path=f"{self.rerun_entity_path}/metadata/frame_{self._frame_counter}",
-            )
-
-            self._frame_counter += 1
-
+        logger.info(f"Generated {output_masks.metadata['num_masks']} masks")
         return output_masks
 
     def _masks_to_boxes(self, masks: np.ndarray) -> np.ndarray:

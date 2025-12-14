@@ -43,7 +43,8 @@ def demonstrate_video_pipeline(
     # Add nodes to the pipeline - VideoReaderNode first, then processing nodes
     pipeline.add_node(
         VideoReaderNode(
-            video_path=video_path, max_frames=max_frames, name="VideoReader"
+            video_path=video_path, max_frames=max_frames, name="VideoReader",
+            skip_frames=5
         )
     )
 

@@ -10,8 +10,13 @@ Features
 
 * Modular design for flexible pipeline construction
 * Support for various 3D perception tasks
-* Easy integration with existing computer vision workflows
+* Native interactive visualization
 * Extensible architecture for custom components
+
+.. image:: _static/images/sam2_bop_example.png
+   :alt: Screen capture of SAM2 results on BOP dataset
+   :width: 600px
+   :align: center
 
 Getting Started
 ---------------
@@ -40,7 +45,10 @@ Currently, 🌈 regenbogen 🌈 is in development. To install from source:
 Quick Start
 ===========
 
-Documentation for usage will be added as the project develops.
+.. code-block:: bash
+
+   uv run python examples/video_processing_demo.py
+
 
 API Reference
 =============

@@ -9,6 +9,7 @@ This example shows how to:
 
 import logging
 
+from regenbogen import Pipeline
 from regenbogen.nodes.bop_dataset import BOPDatasetNode
 from regenbogen.nodes.sam2 import SAM2Node
 
@@ -49,24 +50,27 @@ def sam2_with_bop_example(
         name="BOP_Loader",
     )
 
-    # Create SAM2 node with Rerun logging enabled
     logger.info(f"Initializing SAM2 model (size: {model_size})...")
     sam2_node = SAM2Node(
         model_size=model_size,
-        device=None,  # Auto-detect GPU/CPU
         points_per_batch=64,
         pred_iou_thresh=0.7,
         mask_threshold=0.5,
-        enable_rerun_logging=True,
-        rerun_entity_path="sam2",
         name="SAM2",
     )
 
-    logger.info("Processing frames with SAM2...")
+    pipeline = Pipeline(
+        name="SAM2_BOP_Pipeline",
+        enable_rerun_logging=True,
+        rerun_spawn_viewer=True,
+        rerun_recording_name="SAM2_BOP",
+    )
+    pipeline.add_node(bop_loader)
+    pipeline.add_node(sam2_node)
 
-    # Process frames through the pipeline
-    for frame, gt_poses, obj_ids in bop_loader.process():
-        sam2_node.process(frame)
+    logger.info("Processing frames with SAM2...")
+    for masks in pipeline.process_stream():
+        pass
 
     logger.info("Processing complete! Results are visualized in Rerun viewer")
 
