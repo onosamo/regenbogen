@@ -24,9 +24,34 @@ REQUIREMENTS:
 """
 
 import rerun as rr
+import numpy as np
 
-from regenbogen import Pipeline
-from regenbogen.nodes import DepthAnything3Node, DepthToPointCloudNode, VideoReaderNode
+from regenbogen import Pipeline, Frame
+from regenbogen.nodes import DepthAnything3Node, DepthToPointCloudNode, VideoReaderNode, SAM2Node
+from regenbogen import Node
+
+
+class LabelSkyMaskNode(Node):
+    """
+    A Node that takes a frame with SAM masks and labels the mask at the top of the frame as a sky mask
+    """
+    
+    def process(self, input_data: Frame) -> Frame:
+        if input_data.masks is None:
+            raise ValueError("Input frame has no masks to label sky from.")
+        top_center_pixel = (input_data.rgb.shape[1] // 2, 10)  # x, y near top center
+        labels = []
+        object_classes = []
+        for mask in input_data.masks.masks:
+            if mask[top_center_pixel[1], top_center_pixel[0]]:
+                labels.append(1)
+                object_classes.append("sky")
+            else:
+                labels.append(0)
+                object_classes.append("unknown")
+        input_data.masks.labels = np.array(labels).astype(np.int32)
+        input_data.masks.class_names = object_classes
+        return input_data
 
 
 def main(
@@ -67,6 +92,23 @@ def main(
     )
 
     pipeline.add_node(
+        SAM2Node(
+            model_size="tiny",
+            points_per_batch=64,
+            pred_iou_thresh=0.7,
+            mask_threshold=0.5,
+            name="SAM2",
+        )
+    )
+
+    pipeline.add_node(
+        LabelSkyMaskNode(
+            name="LabelSkyMask",
+            enable_rerun_logging=True,
+        )
+    )
+
+    pipeline.add_node(
         DepthAnything3Node(
             model_name=model_name,
             buffer_size=buffer_size,
@@ -81,6 +123,7 @@ def main(
             max_depth=10.0,
             min_depth=0.1,
             name="PointCloudGen",
+            exclude_classes=["sky"],
         )
     )
 

@@ -13,30 +13,6 @@ import numpy.typing as npt
 
 
 @dataclass
-class Frame:
-    """
-    Frame interface containing RGB, depth, camera intrinsics/extrinsics, and pointcloud data.
-
-    Attributes:
-        rgb: RGB image as numpy array (H, W, 3)
-        idx: Optional global frame index
-        depth: Depth image as numpy array (H, W) or None
-        intrinsics: Camera intrinsics matrix (3, 3) or None
-        extrinsics: Camera extrinsics matrix (4, 4) or None
-        pointcloud: PointCloud instance or None
-        metadata: Additional metadata dictionary
-    """
-
-    rgb: npt.NDArray[np.uint8]
-    idx: Optional[int] = None
-    depth: Optional[npt.NDArray[np.float32]] = None
-    intrinsics: Optional[npt.NDArray[np.float64]] = None
-    extrinsics: Optional[npt.NDArray[np.float64]] = None
-    pointcloud: Optional["PointCloud"] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
 class ObjectModel:
     """
     Object model interface containing mesh or reference pointcloud data.
@@ -180,3 +156,28 @@ class Masks:
             self.class_names = []
         if self.metadata is None:
             self.metadata = {}
+
+
+@dataclass
+class Frame:
+    """
+    Frame interface containing RGB, depth, camera intrinsics/extrinsics, and pointcloud data.
+
+    Attributes:
+        rgb: RGB image as numpy array (H, W, 3)
+        idx: Optional global frame index
+        depth: Depth image as numpy array (H, W) or None
+        intrinsics: Camera intrinsics matrix (3, 3) or None
+        extrinsics: Camera extrinsics matrix (4, 4) or None
+        pointcloud: PointCloud instance or None
+        metadata: Additional metadata dictionary
+    """
+
+    rgb: npt.NDArray[np.uint8]
+    idx: Optional[int] = None
+    depth: Optional[npt.NDArray[np.float32]] = None
+    intrinsics: Optional[npt.NDArray[np.float64]] = None
+    extrinsics: Optional[npt.NDArray[np.float64]] = None
+    pointcloud: Optional["PointCloud"] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    masks: Optional[Masks] = None
