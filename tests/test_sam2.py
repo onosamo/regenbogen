@@ -92,12 +92,12 @@ def test_sam2_node_process():
     node = SAM2Node(model_size="tiny", device="cpu")
     result = node.process(frame)
 
-    assert isinstance(result, Masks)
+    assert isinstance(result, Frame)
     assert result.masks is not None
-    assert result.boxes is not None
-    assert result.scores is not None
-    assert len(result.masks) == len(result.boxes)
-    assert len(result.boxes) == len(result.scores)
+    assert result.masks.boxes is not None
+    assert result.masks.scores is not None
+    assert len(result.masks.masks) == len(result.masks.boxes)
+    assert len(result.masks.boxes) == len(result.masks.scores)
 
 
 def test_sam2_node_invalid_frame():

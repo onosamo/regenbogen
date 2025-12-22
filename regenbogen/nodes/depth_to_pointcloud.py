@@ -4,15 +4,14 @@ Depth to pointcloud conversion node.
 This node converts depth images and camera intrinsics to 3D pointclouds.
 """
 
+import logging
 from collections.abc import Generator
 
 import cv2
 import numpy as np
-import logging
 
 from ..core.node import Node
 from ..interfaces import Frame
-
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +105,7 @@ class DepthToPointCloudNode(Node):
             if frame.masks.class_names is None:
                 raise ValueError("Masks must have class_names to exclude classes")
             else:
-                for mask, class_name in zip(frame.masks.masks, frame.masks.class_names): 
+                for mask, class_name in zip(frame.masks.masks, frame.masks.class_names):
                     if class_name in self.exclude_classes:
                         combined_mask &= ~mask.astype(bool)
                 logger.info(

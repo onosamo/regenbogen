@@ -277,7 +277,7 @@ class SAM2Node(Node):
             output_data = frame
 
         logger.info(f"Generated {output_masks.metadata['num_masks']} masks")
-        return frame
+        return output_data
 
     def _masks_to_boxes(self, masks: np.ndarray) -> np.ndarray:
         """
