@@ -129,7 +129,7 @@ class SAM2Node(Node):
             logger.error(f"Failed to load SAM2 model: {e}")
             raise
 
-    def process(self, input_data: Frame | tuple) -> Masks:
+    def process(self, input_data: Frame | tuple) -> Frame | tuple:
         """
         Process a frame to generate instance segmentation masks.
 
@@ -140,7 +140,7 @@ class SAM2Node(Node):
             input_data: Input frame with RGB image, or tuple (Frame, ...) from dataset loaders
 
         Returns:
-            Masks containing segmentation masks, bounding boxes, and scores
+            Frame with masks attached
         """
         # Handle tuple input from dataset loaders (Frame, ground_truth, obj_ids)
         if isinstance(input_data, tuple):
@@ -269,8 +269,15 @@ class SAM2Node(Node):
                 },
             )
 
+        frame.masks = output_masks
+
+        if isinstance(input_data, tuple):
+            output_data = (frame, *input_data[1:])
+        else:
+            output_data = frame
+
         logger.info(f"Generated {output_masks.metadata['num_masks']} masks")
-        return output_masks
+        return output_data
 
     def _masks_to_boxes(self, masks: np.ndarray) -> np.ndarray:
         """

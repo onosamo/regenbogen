@@ -4,6 +4,7 @@ Depth to pointcloud conversion node.
 This node converts depth images and camera intrinsics to 3D pointclouds.
 """
 
+import logging
 from collections.abc import Generator
 
 import cv2
@@ -11,6 +12,8 @@ import numpy as np
 
 from ..core.node import Node
 from ..interfaces import Frame
+
+logger = logging.getLogger(__name__)
 
 
 class DepthToPointCloudNode(Node):
@@ -20,18 +23,22 @@ class DepthToPointCloudNode(Node):
     Uses camera intrinsics to unproject depth pixels to 3D points.
     """
 
-    def __init__(self, max_depth: float = 10.0, min_depth: float = 0.1, **kwargs):
+    def __init__(self, max_depth: float = 10.0, min_depth: float = 0.1,
+                 exclude_classes: list[str] = [],
+                 **kwargs):
         """
         Initialize depth to pointcloud node.
 
         Args:
             max_depth: Maximum depth value to consider (meters)
             min_depth: Minimum depth value to consider (meters)
+            exclude_classes: List of class names to exclude from pointcloud generation (if masks are available)
             **kwargs: Additional configuration
         """
         super().__init__(**kwargs)
         self.max_depth = max_depth
         self.min_depth = min_depth
+        self.exclude_classes = exclude_classes
 
     def process(
         self, frame: Frame | list[Frame] | Generator[Frame, None, None]
@@ -69,6 +76,9 @@ class DepthToPointCloudNode(Node):
         if frame.depth is None:
             raise ValueError("Input frame must contain depth image")
 
+        if self.exclude_classes and frame.masks is None:
+            raise ValueError("To exclude classes the input frame should contain masks")
+
         if frame.intrinsics is None:
             # Use default intrinsics if not provided
             h, w = frame.depth.shape
@@ -80,9 +90,40 @@ class DepthToPointCloudNode(Node):
         else:
             intrinsics = frame.intrinsics
 
+        # If masks are available and exclude_classes is set, create a mask to filter points
+        if self.exclude_classes and frame.masks is not None:
+            combined_mask = np.ones(frame.depth.shape, dtype=bool)
+
+            #reshape masks if needed
+            if frame.masks.masks[0].shape != frame.depth.shape:
+                resized_masks = []
+                for mask in frame.masks.masks:
+                    resized_mask = cv2.resize(mask.astype(np.uint8), (frame.depth.shape[1], frame.depth.shape[0]), interpolation=cv2.INTER_NEAREST)
+                    resized_masks.append(resized_mask.astype(bool))
+                frame.masks.masks = np.array(resized_masks)
+
+            if frame.masks.class_names is None:
+                raise ValueError("Masks must have class_names to exclude classes")
+            else:
+                for mask, class_name in zip(frame.masks.masks, frame.masks.class_names):
+                    if class_name in self.exclude_classes:
+                        combined_mask &= ~mask.astype(bool)
+                logger.info(
+                    f"Excluding classes {self.exclude_classes} from pointcloud, total excluded points: {np.sum(~combined_mask)}"
+                )
+
+            # Apply combined mask to depth
+            depth_masked = np.where(combined_mask, frame.depth, 0)
+        else:
+            depth_masked = frame.depth
+
         # Generate pointcloud with colors
         pointcloud, colors = self._depth_to_pointcloud_with_colors(
-            frame.depth, intrinsics, frame.rgb
+            depth_masked, intrinsics, frame.rgb
+        )
+
+        logger.info(
+            f"Generated pointcloud with {len(pointcloud)} points"
         )
 
         frame.pointcloud = pointcloud

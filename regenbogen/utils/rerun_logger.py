@@ -105,6 +105,10 @@ class RerunLogger:
         if frame.depth is not None:
             rr.log(f"{entity_path}/depth", rr.DepthImage(frame.depth, meter=1.0))
 
+        # Log masks
+        if frame.masks is not None:
+            self.log_masks(frame.masks, entity_path=entity_path)
+
         # Log camera intrinsics
         if frame.intrinsics is not None:
             height, width = (
@@ -342,7 +346,10 @@ class RerunLogger:
             instance_image = np.zeros((h, w), dtype=np.uint16)
 
             for i, mask in enumerate(masks.masks):
-                instance_image[mask] = i + 1  # Instance ID (0 is background)
+                if masks.labels is not None:
+                    instance_image[mask] = masks.labels[i]
+                else:
+                    instance_image[mask] = i + 1
 
             rr.log(
                 f"{entity_path}/masks",
