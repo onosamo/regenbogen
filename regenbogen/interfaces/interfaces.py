@@ -148,14 +148,8 @@ class Masks:
     boxes: npt.NDArray[np.float32]
     scores: npt.NDArray[np.float32]
     labels: Optional[npt.NDArray[np.int32]] = None
-    class_names: Optional[List[str]] = None
-    metadata: Dict[str, Any] = None
-
-    def __post_init__(self):
-        if self.class_names is None:
-            self.class_names = []
-        if self.metadata is None:
-            self.metadata = {}
+    class_names: List[str] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
