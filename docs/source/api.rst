@@ -1,20 +1,46 @@
 API Reference
 =============
 
-This section will contain the complete API documentation for 🌈 regenbogen 🌈.
+This section contains the complete API documentation for 🌈 regenbogen 🌈,
+automatically generated from class definitions and docstrings in the source code.
 
-Currently, the project is in early development. As modules and classes
-are added to the codebase, their documentation will automatically appear here.
+Core Module
+-----------
 
-Modules
--------
+The core module contains the fundamental building blocks of the framework:
+pipelines and nodes.
 
-When Python modules are added to the regenbogen package, they will be
-documented here using Sphinx's autodoc functionality.
+.. automodule:: regenbogen.core.node
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-.. note::
-   API documentation will be generated automatically as the project develops.
-   Check back here as new modules and functionality are added to 🌈 regenbogen 🌈.
+.. automodule:: regenbogen.core.pipeline
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-For the most up-to-date information about the project's development,
-visit the `GitHub repository <https://github.com/onosamo/regenbogen>`_.
+.. automodule:: regenbogen.core.graph_pipeline
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Data Interfaces
+---------------
+
+Standardized data structures used for communication between nodes in the pipeline.
+
+.. automodule:: regenbogen.interfaces
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Utility Functions
+-----------------
+
+Helper utilities for visualization and device management.
+
+.. automodule:: regenbogen.utils.rerun_logger
+   :members:
+   :undoc-members:
+   :show-inheritance:
