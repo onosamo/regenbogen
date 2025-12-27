@@ -29,7 +29,7 @@ classifiers = [
 ]
 keywords = ["3d", "perception", "computer-vision", "depth-estimation", "object-detection", "pose-estimation"]
 dependencies = [
-    "numpy>=1.20.0",
+    "numpy>=2.0.0",
     "scipy>=1.7.0",
     "rerun-sdk>=0.15.0",
     "platformdirs>=3.0.0",
@@ -59,9 +59,9 @@ full = [
     "Pillow>=8.0.0",  # For image processing
     "scikit-learn>=0.24.0",  # For feature visualization (PCA)
     "einops>=0.6.0",  # Required for DA3
-    "depth_anything_3@git+https://github.com/fedor-chervinskii/Depth-Anything-3.git",
+    "depth_anything_3@git+https://github.com/fedor-chervinskii/Depth-Anything-3.git@main",
     # SAM3 for open-vocabulary segmentation (fork with Apple Silicon support and fixed assets)
-    "sam3@git+https://github.com/fedor-chervinskii/sam3-apple-silicon.git",
+    "sam3@git+https://github.com/fedor-chervinskii/sam3-apple-silicon.git@main",
     "pycocotools>=2.0.0",  # Required for SAM3
     "psutil>=5.9.0",  # Required for SAM3
     # Rendering dependencies
