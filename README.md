@@ -7,7 +7,7 @@ A modular framework for building 3D perception pipelines.
 Install from source:
 
 ```bash
-git clone git@github.com:fedor-chervinskii/regenbogen.git
+git clone git@github.com:onosamo/regenbogen.git
 cd regenbogen
 uv sync --group full
 ```
@@ -18,6 +18,7 @@ Explore complete working examples in the [`examples/`](examples/) directory:
 
 - **[bop_dataset_example.py](examples/bop_dataset_example.py)** - Load and visualize BOP benchmark datasets with automatic download
 - **[sam2_bop_example.py](examples/sam2_bop_example.py)** - Instance segmentation with SAM2 on BOP dataset images
+- **[sam3_bop_example.py](examples/sam3_bop_example.py)** - Text-prompted segmentation with SAM3 using open-vocabulary concepts
 - **[cnos_pipeline_example.py](examples/cnos_pipeline_example.py)** - Complete CNOS pipeline for CAD-based novel object segmentation
 - **[template_rendering_example.py](examples/template_rendering_example.py)** - Render RGB-D templates from CAD models for pose estimation
 - **[graph_pipeline_example.py](examples/graph_pipeline_example.py)** - Dynamic graph construction with natural branching
@@ -55,6 +56,7 @@ Regenbogen supports interactive visualization of intermediate pipeline results u
 - **ICPRefinementNode**: Iterative Closest Point pose refinement
 - **DepthAnythingNode**: Depth Anything v2 model for mono depth estimation
 - **SAM2Node**: Segment Anything Model 2 for instance segmentation with automatic mask generation
+- **SAM3Node**: Segment Anything Model 3 with open-vocabulary text-prompted segmentation (270K+ concepts)
 - **Dinov2Node**: Dinov2 vision transformer for computing dense feature descriptors
 - **VideoReaderNode**: Read frames from video files
 - **RMSENode**: Evaluate pointcloud similarity

@@ -140,16 +140,16 @@ class Masks:
         boxes: Bounding boxes as numpy array (N, 4) in [x1, y1, x2, y2] format
         scores: Confidence scores as numpy array (N,)
         labels: Class labels as numpy array (N,) or None
-        class_names: List of class names corresponding to labels
+        class_names: List of class names corresponding to labels, length N
         metadata: Additional metadata dictionary
     """
 
     masks: npt.NDArray[np.bool_]
     boxes: npt.NDArray[np.float32]
     scores: npt.NDArray[np.float32]
-    labels: Optional[npt.NDArray[np.int32]] = None
+    labels: Optional[npt.NDArray[np.uint16]] = None
     class_names: Optional[List[str]] = None
-    metadata: Dict[str, Any] = None
+    metadata: Optional[Dict[str, Any]] = None
 
     def __post_init__(self):
         if self.class_names is None:

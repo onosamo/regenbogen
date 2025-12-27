@@ -328,7 +328,7 @@ class RerunLogger:
 
     def log_masks(self, masks: Masks, entity_path: str = "segmentation"):
         """
-        Log instance segmentation masks to Rerun.
+        Log instance segmentation masks to Rerun with annotation context for class names.
 
         Args:
             masks: Masks object containing segmentation results
@@ -339,14 +339,59 @@ class RerunLogger:
 
         self._ensure_initialized()
 
+        # Create annotation context if class_names are provided
+        if masks.labels:
+            class_descriptions = []
+            unique_labels, indices = np.unique(masks.labels, return_index=True)
+            if masks.class_names:
+                unique_class_names = [masks.class_names[idx] for idx in indices]
+            else:
+                unique_class_names = [f"class_{lbl}" for lbl in unique_labels]
+
+            for i, label in enumerate(unique_labels):
+                class_descriptions.append(
+                    rr.AnnotationInfo(id=label, label=unique_class_names[i])
+                )
+
+            class_descriptions.append(
+                rr.AnnotationInfo(id=0, label="background")
+            )
+
+            print(class_descriptions)
+
+            rr.log(
+                entity_path,
+                rr.AnnotationContext(class_descriptions),
+                static=True,
+            )
+
         # Log segmentation masks as an image where each instance has a unique value
         if masks.masks is not None and len(masks.masks) > 0:
             # Create instance segmentation image (H, W) with instance IDs
-            h, w = masks.masks.shape[1:]
+            # Handle different mask shapes: (N, H, W), (H, W), or higher dimensional (take last 2 dims)
+            if masks.masks.ndim >= 3:
+                # Take last two dimensions as H, W
+                h, w = masks.masks.shape[-2:]
+            elif masks.masks.ndim == 2:
+                h, w = masks.masks.shape
+            else:
+                logger.error(f"Unexpected mask shape: {masks.masks.shape}, expected at least 2D")
+                return
+
             instance_image = np.zeros((h, w), dtype=np.uint16)
 
-            for i, mask in enumerate(masks.masks):
-                if masks.labels is not None:
+            # Reshape masks to (N, H, W) if needed
+            if masks.masks.ndim > 3:
+                # Flatten extra dimensions
+                num_masks = np.prod(masks.masks.shape[:-2])
+                mask_array = masks.masks.reshape(num_masks, h, w)
+            elif masks.masks.ndim == 3:
+                mask_array = masks.masks
+            else:
+                mask_array = masks.masks[np.newaxis, ...]
+
+            for i, mask in enumerate(mask_array):
+                if masks.labels is not None and i < len(masks.labels):
                     instance_image[mask] = masks.labels[i]
                 else:
                     instance_image[mask] = i + 1
@@ -368,11 +413,10 @@ class RerunLogger:
 
                 # Create label with instance ID and score
                 if masks.labels is not None and i < len(masks.labels):
-                    label_idx = masks.labels[i]
                     class_name = (
-                        masks.class_names[label_idx]
-                        if masks.class_names and label_idx < len(masks.class_names)
-                        else f"class_{label_idx}"
+                        masks.class_names[i]
+                        if masks.class_names and i < len(masks.class_names)
+                        else f"class_{masks.labels[i]}"
                     )
                     labels.append(f"{class_name} ({score:.2f})")
                 else:
