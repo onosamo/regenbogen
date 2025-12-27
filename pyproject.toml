@@ -60,6 +60,10 @@ full = [
     "scikit-learn>=0.24.0",  # For feature visualization (PCA)
     "einops>=0.6.0",  # Required for DA3
     "depth_anything_3@git+https://github.com/fedor-chervinskii/Depth-Anything-3.git",
+    # SAM3 for open-vocabulary segmentation (fork with Apple Silicon support and fixed assets)
+    "sam3@git+https://github.com/fedor-chervinskii/sam3-apple-silicon.git",
+    "pycocotools>=2.0.0",  # Required for SAM3
+    "psutil>=5.9.0",  # Required for SAM3
     # Rendering dependencies
     "pyopengl>=3.1.0",
     "pyopengl-accelerate>=3.1.0",

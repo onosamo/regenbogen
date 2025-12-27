@@ -28,6 +28,7 @@ __all__ = [
     "DepthAnything3Node",
     "VideoReaderNode",
     "SAM2Node",
+    "SAM3Node",
     "Dinov2Node",
 ]
 
@@ -49,6 +50,7 @@ _NODE_MODULES = {
     "DepthAnything3Node": "regenbogen.nodes.depth_anything3",
     "VideoReaderNode": "regenbogen.nodes.video_reader",
     "SAM2Node": "regenbogen.nodes.sam2",
+    "SAM3Node": "regenbogen.nodes.sam3",
     "Dinov2Node": "regenbogen.nodes.dinov2",
 }
 
