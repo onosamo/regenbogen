@@ -20,18 +20,20 @@ class DepthToPointCloudNode(Node):
     Uses camera intrinsics to unproject depth pixels to 3D points.
     """
 
-    def __init__(self, max_depth: float = 10.0, min_depth: float = 0.1, **kwargs):
+    def __init__(self, max_depth: float = 10.0, min_depth: float = 0.1, subsample_factor: int = 1, **kwargs):
         """
         Initialize depth to pointcloud node.
 
         Args:
             max_depth: Maximum depth value to consider (meters)
             min_depth: Minimum depth value to consider (meters)
+            subsample_factor: Factor to subsample depth map (1 = no subsampling, 2 = half resolution, etc.)
             **kwargs: Additional configuration
         """
         super().__init__(**kwargs)
         self.max_depth = max_depth
         self.min_depth = min_depth
+        self.subsample_factor = subsample_factor
 
     def process(
         self, frame: Frame | list[Frame] | Generator[Frame, None, None]
@@ -80,9 +82,23 @@ class DepthToPointCloudNode(Node):
         else:
             intrinsics = frame.intrinsics
 
+        # Subsample depth map if requested
+        depth = frame.depth
+        rgb = frame.rgb
+        if self.subsample_factor > 1:
+            depth = depth[::self.subsample_factor, ::self.subsample_factor]
+            if rgb is not None:
+                rgb = rgb[::self.subsample_factor, ::self.subsample_factor]
+            # Adjust intrinsics for subsampling
+            intrinsics = intrinsics.copy()
+            intrinsics[0, 0] /= self.subsample_factor  # fx
+            intrinsics[1, 1] /= self.subsample_factor  # fy
+            intrinsics[0, 2] /= self.subsample_factor  # cx
+            intrinsics[1, 2] /= self.subsample_factor  # cy
+
         # Generate pointcloud with colors
         pointcloud, colors = self._depth_to_pointcloud_with_colors(
-            frame.depth, intrinsics, frame.rgb
+            depth, intrinsics, rgb
         )
 
         frame.pointcloud = pointcloud

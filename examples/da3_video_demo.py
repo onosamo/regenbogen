@@ -36,6 +36,7 @@ def main(
     buffer_size: int = 3,
     buffer_step: int = -1,
     frame_skip: int = 1,
+    pointcloud_subsample: int = 1,
 ):
     """
     Demonstrate video processing with Depth Anything V3.
@@ -47,6 +48,7 @@ def main(
         buffer_size: Sliding window size for pose estimation
         buffer_step: Number of frames to shift buffer each step (1 for sliding window, -1 for buffer_size-1)
         frame_skip: Skip every N frames (1 = process all frames)
+        pointcloud_subsample: Subsample factor for pointcloud (1 = full resolution, 2 = half, etc.)
     """
 
     print("Setting up pipeline...")
@@ -80,6 +82,7 @@ def main(
         DepthToPointCloudNode(
             max_depth=10.0,
             min_depth=0.1,
+            subsample_factor=pointcloud_subsample,
             name="PointCloudGen",
         )
     )
@@ -217,6 +220,12 @@ if __name__ == "__main__":
         default=1,
         help="Skip every N frames (1 = process all frames)",
     )
+    parser.add_argument(
+        "--pointcloud-subsample",
+        type=int,
+        default=1,
+        help="Subsample factor for pointcloud generation (1 = full resolution, 2 = half, etc.)",
+    )
 
     args = parser.parse_args()
 
@@ -226,4 +235,5 @@ if __name__ == "__main__":
         model_name=args.model,
         buffer_size=args.buffer_size,
         frame_skip=args.frame_skip,
+        pointcloud_subsample=args.pointcloud_subsample,
     )
