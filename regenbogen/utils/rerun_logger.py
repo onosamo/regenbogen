@@ -328,7 +328,7 @@ class RerunLogger:
 
     def log_masks(self, masks: Masks, entity_path: str = "segmentation"):
         """
-        Log instance segmentation masks to Rerun.
+        Log instance segmentation masks to Rerun with annotation context for class names.
 
         Args:
             masks: Masks object containing segmentation results
@@ -338,6 +338,32 @@ class RerunLogger:
             return
 
         self._ensure_initialized()
+
+        # Create annotation context if class_names are provided
+        if masks.labels:
+            class_descriptions = []
+            unique_labels, indices = np.unique(masks.labels, return_index=True)
+            if masks.class_names:
+                unique_class_names = [masks.class_names[idx] for idx in indices]
+            else:
+                unique_class_names = [f"class_{lbl}" for lbl in unique_labels]
+
+            for i, label in enumerate(unique_labels):
+                class_descriptions.append(
+                    rr.AnnotationInfo(id=label, label=unique_class_names[i])
+                )
+
+            class_descriptions.append(
+                rr.AnnotationInfo(id=0, label="background")
+            )
+
+            print(class_descriptions)
+
+            rr.log(
+                entity_path,
+                rr.AnnotationContext(class_descriptions),
+                static=True,
+            )
 
         # Log segmentation masks as an image where each instance has a unique value
         if masks.masks is not None and len(masks.masks) > 0:
@@ -387,11 +413,10 @@ class RerunLogger:
 
                 # Create label with instance ID and score
                 if masks.labels is not None and i < len(masks.labels):
-                    label_idx = masks.labels[i]
                     class_name = (
-                        masks.class_names[label_idx]
-                        if masks.class_names and label_idx < len(masks.class_names)
-                        else f"class_{label_idx}"
+                        masks.class_names[i]
+                        if masks.class_names and i < len(masks.class_names)
+                        else f"class_{masks.labels[i]}"
                     )
                     labels.append(f"{class_name} ({score:.2f})")
                 else:

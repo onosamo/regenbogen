@@ -81,9 +81,9 @@ class SAM3Node(Node):
     def _initialize_model(self):
         """Initialize the SAM3 model from HuggingFace."""
         if self.device is None:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            device = "cuda" if torch.cuda.is_available() else "cpu"
         else:
-            device = torch.device(self.device)
+            device = self.device
 
         logger.info("Loading SAM3 model from facebook/sam3")
         logger.info(f"Device: {device}")
@@ -124,7 +124,7 @@ class SAM3Node(Node):
         text_prompt: str | None = None,
         point_prompts: Optional[np.ndarray] = None,
         box_prompts: Optional[np.ndarray] = None,
-    ) -> Masks:
+    ) -> Frame | tuple:
         """
         Process a frame to generate segmentation masks using SAM3.
 
@@ -201,21 +201,11 @@ class SAM3Node(Node):
 
         if output is None:
             logger.warning("No output from SAM3 model")
-            h, w = rgb_image.shape[:2]
-            return Masks(
-                masks=np.zeros((0, h, w), dtype=bool),
-                boxes=np.zeros((0, 4), dtype=np.float32),
-                scores=np.zeros((0,), dtype=np.float32),
-                labels=None,
-                class_names=[],
-                metadata={
-                    "model": "sam3",
-                    "text_prompt": text,
-                    "has_point_prompts": points is not None,
-                    "has_box_prompts": boxes is not None,
-                    "num_masks": 0,
-                },
-            )
+            # Return frame or tuple depending on input type
+            if isinstance(input_data, tuple):
+                output_data = (frame, *input_data[1:])
+            else:
+                output_data = frame
 
         # Extract masks, boxes, and scores from output
         pred_masks = output["masks"]  # Shape: (N, H, W)
@@ -255,11 +245,13 @@ class SAM3Node(Node):
         else:
             class_names = ["object"] * len(pred_masks)
 
+        labels = np.array([1] * len(pred_masks), dtype=np.uint16)  # Dummy class IDs
+
         output_masks = Masks(
             masks=pred_masks,
             boxes=pred_boxes,
             scores=pred_scores,
-            labels=None,  # SAM3 doesn't provide class IDs, only concept-based
+            labels=labels,  # SAM3 doesn't provide class IDs, only concept-based
             class_names=class_names,
             metadata={
                 "model": "sam3",
