@@ -115,6 +115,19 @@ class SAM3Node(Node):
                 f"SAM3 dependencies not installed. Missing: {e}"
             )
         except Exception as e:
+            error_msg = str(e)
+            # Check for HuggingFace authentication errors (common in CI)
+            if "401 Client Error" in error_msg or "unauthorized" in error_msg.lower():
+                logger.error(
+                    f"HuggingFace authentication failed. This is expected in CI environments.\\n"
+                    f"To use SAM3 locally, ensure you:\\n"
+                    f"  1. Login: huggingface-cli login\\n"
+                    f"  2. Request access: https://huggingface.co/facebook/sam3\\n\\n"
+                    f"Error: {error_msg}"
+                )
+                raise PermissionError(
+                    f"SAM3 requires HuggingFace authentication. Error: {error_msg}"
+                )
             logger.error(f"Failed to load SAM3 model: {e}")
             raise
 
@@ -228,7 +241,7 @@ class SAM3Node(Node):
         # Ensure masks are 3D (N, H, W) - squeeze out extra dimensions
         while pred_masks.ndim > 3:
             pred_masks = pred_masks.squeeze()
-        
+
         # If still not 3D, ensure correct shape
         if pred_masks.ndim == 2:
             pred_masks = pred_masks[np.newaxis, ...]  # Add batch dimension

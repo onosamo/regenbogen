@@ -377,7 +377,7 @@ class RerunLogger:
             else:
                 logger.error(f"Unexpected mask shape: {masks.masks.shape}, expected at least 2D")
                 return
-                
+
             instance_image = np.zeros((h, w), dtype=np.uint16)
 
             # Reshape masks to (N, H, W) if needed
