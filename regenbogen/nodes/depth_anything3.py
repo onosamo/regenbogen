@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 
+import cv2
 import numpy as np
 
 from ..core.node import Node
@@ -173,6 +174,9 @@ class DepthAnything3Node(Node):
         """Process the frame buffer with DA3."""
         import torch
 
+        if self.model is None:
+            raise RuntimeError("Model is not initialized")
+
         # Convert frames to image list
         images = [f.rgb for f in self.frame_buffer]
 
@@ -233,21 +237,32 @@ class DepthAnything3Node(Node):
                 aligned_poses = predicted_poses_cw
                 logger.debug("First window - initializing global coordinate frame")
 
-            for buffer_idx, frame in enumerate(self.frame_buffer):
-                frame.extrinsics = aligned_poses[buffer_idx]
-                frame.intrinsics = prediction.intrinsics[buffer_idx].astype(
-                    np.float64
-                )
-                frame.depth = prediction.depth[buffer_idx]
-                frame.metadata = {
-                    **frame.metadata,
-                    "da3_model": self.model_name,
-                    "buffer_size": self.buffer_size,
-                    "pose_estimated": self.estimate_poses and frame.extrinsics is not None,
-                    "is_metric_depth": "nested" in self.model_name.lower(),
-                }
-
             self.previous_poses = aligned_poses.copy()
+
+        else:
+            aligned_poses = [np.eye(4, dtype=np.float64)] * len(self.frame_buffer)
+
+        new_shape = (prediction.depth.shape[1], prediction.depth.shape[2])
+
+        for buffer_idx, frame in enumerate(self.frame_buffer):
+            frame.extrinsics = aligned_poses[buffer_idx]
+            frame.intrinsics = prediction.intrinsics[buffer_idx].astype(
+                np.float64
+            )
+            # update rgb to match intrinsics resizing
+            frame.rgb = np.array(cv2.resize(
+                frame.rgb,
+                new_shape[::-1],
+                interpolation=cv2.INTER_LINEAR,
+            ), dtype=np.uint8)
+            frame.depth = prediction.depth[buffer_idx]
+            frame.metadata = {
+                **frame.metadata,
+                "da3_model": self.model_name,
+                "buffer_size": self.buffer_size,
+                "pose_estimated": self.estimate_poses and frame.extrinsics is not None,
+                "is_metric_depth": "nested" in self.model_name.lower(),
+            }
 
         return self.frame_buffer
 

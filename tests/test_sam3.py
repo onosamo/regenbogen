@@ -1,8 +1,9 @@
 """Tests for SAM3 node."""
 
+from unittest.mock import Mock
+
 import numpy as np
 import pytest
-from unittest.mock import Mock
 
 from regenbogen.interfaces import Frame, Masks
 
@@ -15,39 +16,39 @@ _sam3_error = None
 def sam3_node():
     """
     Fixture that provides either a real SAM3Node or a mock.
-    
+
     Tries to initialize SAM3Node once. If it fails (due to missing dependencies
     or authentication issues), returns a mock object that simulates the expected behavior.
     """
     global _sam3_available, _sam3_error
-    
+
     try:
         from regenbogen.nodes import SAM3Node
-        
+
         # Try to initialize the model
         node = SAM3Node(device="cpu", text_prompt="test object")
         _sam3_available = True
         return node
-        
+
     except ImportError as e:
         _sam3_available = False
         _sam3_error = f"Import error: {e}"
-        
+
     except PermissionError as e:
         _sam3_available = False
         _sam3_error = f"HuggingFace authentication required: {e}"
-        
+
     except Exception as e:
         _sam3_available = False
         _sam3_error = f"Initialization failed: {e}"
-    
+
     # Create mock SAM3Node
     mock_node = Mock()
     mock_node.name = "MockSAM3"
     mock_node.text_prompt = "test object"
     mock_node.mask_threshold = 0.0
     mock_node.device = "cpu"
-    
+
     def mock_process(input_data, text_prompt=None, point_prompts=None, box_prompts=None):
         """Mock process method that returns realistic output."""
         # Handle tuple input from dataset loaders
@@ -57,7 +58,7 @@ def sam3_node():
         else:
             frame = input_data
             extra_data = None
-        
+
         # Create mock masks
         h, w = frame.rgb.shape[:2]
         mock_masks = Masks(
@@ -72,15 +73,15 @@ def sam3_node():
                 "has_box_prompts": box_prompts is not None,
             }
         )
-        
+
         # Attach masks to frame
         output_frame = Frame(rgb=frame.rgb.copy())
         output_frame.masks = mock_masks
-        
+
         if extra_data:
             return (output_frame,) + extra_data
         return output_frame
-    
+
     mock_node.process = mock_process
     return mock_node
 

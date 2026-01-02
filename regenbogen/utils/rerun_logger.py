@@ -97,6 +97,11 @@ class RerunLogger:
         if frame.idx is not None:
             rr.set_time(entity_path, sequence=frame.idx)
 
+        # Log frame metadata as text if present
+        if frame.metadata:
+            metadata_str = "\n".join([f"{k}: {v}" for k, v in frame.metadata.items()])
+            rr.log(f"{entity_path}/metadata", rr.TextDocument(metadata_str))
+
         # Log RGB image
         if frame.rgb is not None:
             rr.log(f"{entity_path}/rgb", rr.Image(frame.rgb))
@@ -121,6 +126,26 @@ class RerunLogger:
                     focal_length=[frame.intrinsics[0, 0], frame.intrinsics[1, 1]],
                     principal_point=[frame.intrinsics[0, 2], frame.intrinsics[1, 2]],
                 ),
+            )
+            rr.log(
+                f"{entity_path}",
+                rr.TextLog(f"Intrinsics:\n{frame.intrinsics}")
+            )
+
+        if frame.extrinsics is not None:
+            rr.log(
+                f"/world/keframes/frame_{frame.idx if frame.idx is not None else 0:04d}",
+                rr.Transform3D(
+                    mat3x3=frame.extrinsics[:3, :3],
+                    translation=frame.extrinsics[:3, 3],
+                ),
+            )
+
+        if frame.pointcloud is not None:
+            self.log_pointcloud(
+                frame.pointcloud.points,
+                entity_path=f"world/keyframes/frame_{frame.idx if frame.idx is not None else 0:04d}/pointcloud",
+                colors=frame.pointcloud.colors,
             )
 
         # Log ground truth poses and object models if provided
@@ -340,7 +365,7 @@ class RerunLogger:
         self._ensure_initialized()
 
         # Create annotation context if class_names are provided
-        if masks.labels:
+        if masks.labels is not None and len(masks.labels) > 0:
             class_descriptions = []
             unique_labels, indices = np.unique(masks.labels, return_index=True)
             if masks.class_names:

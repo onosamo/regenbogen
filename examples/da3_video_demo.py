@@ -148,13 +148,10 @@ def main(
                         ),
                     )
                     if has_pc and has_pose:
-                        # Get colors from metadata (computed by DepthToPointCloudNode)
-                        colors = frame.metadata.get("pointcloud_colors", None)
-
                         # Log pointcloud in world coordinates
                         rr.log(
                             f"world/keyframes/frame_{processed_frames:04d}/pointcloud",
-                            rr.Points3D(frame.pointcloud, colors=colors),
+                            rr.Points3D(frame.pointcloud.points, colors=frame.pointcloud.colors),
                         )
 
     except KeyboardInterrupt:

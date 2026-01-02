@@ -8,7 +8,6 @@ the SAM3 model from Meta/Facebook with open-vocabulary concept understanding.
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import numpy as np
 import torch
@@ -42,8 +41,8 @@ class SAM3Node(Node):
         self,
         device: str | None = None,
         text_prompt: str | None = None,
-        point_prompts: Optional[np.ndarray] = None,
-        box_prompts: Optional[np.ndarray] = None,
+        point_prompts: np.ndarray | None = None,
+        box_prompts: np.ndarray | None = None,
         mask_threshold: float = 0.0,
         name: str | None = None,
         **kwargs,
@@ -135,8 +134,8 @@ class SAM3Node(Node):
         self,
         input_data: Frame | tuple,
         text_prompt: str | None = None,
-        point_prompts: Optional[np.ndarray] = None,
-        box_prompts: Optional[np.ndarray] = None,
+        point_prompts: np.ndarray | None = None,
+        box_prompts: np.ndarray | None = None,
     ) -> Frame | tuple:
         """
         Process a frame to generate segmentation masks using SAM3.
