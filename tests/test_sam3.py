@@ -111,6 +111,7 @@ def test_sam3_text_prompt_processing(sam3_node):
     # Check output structure - should return frame with masks attached
     assert isinstance(output_frame, Frame)
     assert output_frame.masks is not None
+    assert output_frame.masks.metadata is not None
     assert hasattr(output_frame.masks, "masks")
     assert hasattr(output_frame.masks, "boxes")
     assert hasattr(output_frame.masks, "scores")
@@ -168,6 +169,7 @@ def test_sam3_tuple_input(sam3_node):
     output_frame = output[0]
     assert isinstance(output_frame, Frame)
     assert output_frame.masks is not None
+    assert output_frame.masks.metadata is not None
     assert output_frame.masks.metadata["model"] == "sam3"
 
 
@@ -180,3 +182,64 @@ def test_sam3_availability_status():
         print("  Tests are running with mock SAM3Node")
     else:
         print("\n? SAM3 availability not yet determined")
+
+
+def test_sam3_multi_prompt(sam3_node):
+    """Test SAM3 with multiple comma-separated prompts."""
+    # Create test frame
+    height, width = 480, 640
+    rgb = np.random.randint(0, 256, (height, width, 3), dtype=np.uint8)
+    frame = Frame(rgb=rgb)
+
+    if _sam3_available:
+        # Real SAM3 node
+        result = sam3_node.process(frame, text_prompt="player, ball, net")
+
+        assert isinstance(result, Frame)
+        assert result.masks is not None
+        assert isinstance(result.masks, Masks)
+        assert result.masks.metadata is not None
+        assert result.masks.metadata["model"] == "sam3"
+        assert result.masks.metadata["is_multi_prompt"] is True
+        assert result.masks.metadata["num_prompts"] == 3
+        assert result.masks.metadata["text_prompt"] == "player, ball, net"
+        
+        # Check that class names match the prompts
+        assert result.masks.class_names is not None
+        unique_class_names = set(result.masks.class_names)
+        assert "player" in unique_class_names or "ball" in unique_class_names or "net" in unique_class_names
+    else:
+        # Mock node - simulate multi-prompt output
+        mock_masks = np.random.rand(6, height, width) > 0.5  # 6 masks total
+        mock_boxes = np.random.rand(6, 4).astype(np.float32) * [width, height, width, height]
+        mock_scores = np.random.rand(6).astype(np.float32)
+        mock_labels = np.ones(6, dtype=np.uint16)
+        
+        # Simulate 2 masks per prompt (player, ball, net)
+        mock_class_names = ["player", "player", "ball", "ball", "net", "net"]
+        
+        mock_output = Masks(
+            masks=mock_masks,
+            boxes=mock_boxes,
+            scores=mock_scores,
+            labels=mock_labels,
+            class_names=mock_class_names,
+            metadata={
+                "model": "sam3",
+                "text_prompt": "player, ball, net",
+                "num_prompts": 3,
+                "is_multi_prompt": True,
+                "num_masks": 6,
+            },
+        )
+        
+        frame.masks = mock_output
+        sam3_node.process = Mock(return_value=frame)
+        
+        result = sam3_node.process(frame, text_prompt="player, ball, net")
+        
+        assert isinstance(result, Frame)
+        assert result.masks is not None
+        assert result.masks.metadata is not None
+        assert result.masks.metadata["is_multi_prompt"] is True
+        assert result.masks.metadata["num_prompts"] == 3

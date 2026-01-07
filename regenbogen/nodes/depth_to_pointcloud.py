@@ -34,14 +34,26 @@ class DepthToPointCloudNode(Node):
             max_depth: Maximum depth value to consider (meters)
             min_depth: Minimum depth value to consider (meters)
             exclude_classes: List of class names to exclude from pointcloud generation (if masks are available)
+                            Can also be a comma-separated string that will be split into a list
             include_classes: If provided, only include points from masks with these class names (whitelist)
+                            Can also be a comma-separated string that will be split into a list
             **kwargs: Additional configuration
         """
         super().__init__(**kwargs)
         self.max_depth = max_depth
         self.min_depth = min_depth
-        self.exclude_classes = exclude_classes
-        self.include_classes = include_classes
+        
+        # Handle string input for exclude_classes (comma-separated)
+        if isinstance(exclude_classes, str):
+            self.exclude_classes = [c.strip() for c in exclude_classes.split(",")]
+        else:
+            self.exclude_classes = exclude_classes
+            
+        # Handle string input for include_classes (comma-separated)
+        if isinstance(include_classes, str):
+            self.include_classes = [c.strip() for c in include_classes.split(",")]
+        else:
+            self.include_classes = include_classes
 
     def process(
         self, frame: Frame | list[Frame] | Generator[Frame, None, None]
@@ -95,31 +107,36 @@ class DepthToPointCloudNode(Node):
 
         # If masks are available and filtering is enabled, create a mask to filter points
         if (self.exclude_classes or self.include_classes) and frame.masks is not None:
-            # Start with no points included if using whitelist, all points if using blacklist
-            if self.include_classes is not None:
-                combined_mask = np.zeros(frame.depth.shape, dtype=bool)
+            # Verify depth exists before trying to resize masks
+            if frame.depth is None:
+                logger.warning("Depth is None but masks are present. Skipping mask filtering.")
+                combined_mask = None
             else:
-                combined_mask = np.ones(frame.depth.shape, dtype=bool)
+                # Start with no points included if using whitelist, all points if using blacklist
+                if self.include_classes is not None:
+                    combined_mask = np.zeros(frame.depth.shape, dtype=bool)
+                else:
+                    combined_mask = np.ones(frame.depth.shape, dtype=bool)
 
-            # Reshape masks if needed
-            if frame.masks.masks[0].shape != frame.depth.shape:
-                resized_masks = []
-                for mask in frame.masks.masks:
-                    resized_mask = cv2.resize(mask.astype(np.uint8), (frame.depth.shape[1], frame.depth.shape[0]), interpolation=cv2.INTER_NEAREST)
-                    resized_masks.append(resized_mask.astype(bool))
-                frame.masks.masks = np.array(resized_masks)
+                # Reshape masks if needed
+                if frame.masks.masks[0].shape != frame.depth.shape:
+                    resized_masks = []
+                    for mask in frame.masks.masks:
+                        resized_mask = cv2.resize(mask.astype(np.uint8), (frame.depth.shape[1], frame.depth.shape[0]), interpolation=cv2.INTER_NEAREST)
+                        resized_masks.append(resized_mask.astype(bool))
+                    frame.masks.masks = np.array(resized_masks)
 
-            if frame.masks.class_names is None:
-                raise ValueError("Masks must have class_names to filter by classes")
+                if frame.masks.class_names is None:
+                    raise ValueError("Masks must have class_names to filter by classes")
 
-            # Apply whitelist (include only specified classes)
-            if self.include_classes is not None:
-                for mask, class_name in zip(frame.masks.masks, frame.masks.class_names):
-                    if class_name in self.include_classes:
-                        combined_mask |= mask.astype(bool)
-                logger.info(
-                    f"Including only classes {self.include_classes} in pointcloud, total included points: {np.sum(combined_mask)}"
-                )
+                # Apply whitelist (include only specified classes)
+                if self.include_classes is not None:
+                    for mask, class_name in zip(frame.masks.masks, frame.masks.class_names):
+                        if class_name in self.include_classes:
+                            combined_mask |= mask.astype(bool)
+                    logger.info(
+                        f"Including only classes {self.include_classes} in pointcloud, total included points: {np.sum(combined_mask)}"
+                    )
 
             # Apply blacklist (exclude specified classes)
             if self.exclude_classes:
@@ -191,20 +208,10 @@ class DepthToPointCloudNode(Node):
         if len(depth_valid) == 0:
             return np.array([]).reshape(0, 3)
 
-        # Unproject to 3D coordinates using standard pinhole camera model
-        # This formula works for both interpretations:
-        # - If depth = z-coordinate: directly use it as Z, scale x/y accordingly
-        # - If depth = radial distance: scale ray (x_norm, y_norm, 1) by depth
-        # Both interpretations yield the same result: (x_norm*d, y_norm*d, d)
-
-        # Compute normalized ray directions
-        x_normalized = (u_valid - cx) / fx
-        y_normalized = (v_valid - cy) / fy
-
-        # Apply depth (mathematically equivalent for both interpretations)
+        # Unproject to 3D coordinates
+        x = (u_valid - cx) * depth_valid / fx
+        y = (v_valid - cy) * depth_valid / fy
         z = depth_valid
-        x = x_normalized * z
-        y = y_normalized * z
 
         # Stack into pointcloud
         pointcloud = np.stack([x, y, z], axis=1).astype(np.float32)
@@ -264,23 +271,10 @@ class DepthToPointCloudNode(Node):
         if len(depth_valid) == 0:
             return np.array([]).reshape(0, 3), None
 
-        # Unproject to 3D coordinates using standard pinhole camera model
-        # This formula works for both interpretations:
-        # - If depth = z-coordinate: directly use it as Z, scale x/y accordingly
-        # - If depth = radial distance: scale ray (x_norm, y_norm, 1) by depth
-        # Both interpretations yield the same result: (x_norm*d, y_norm*d, d)
-
-        # Compute normalized ray directions
-        x_normalized = (u_valid - cx) / fx
-        y_normalized = (v_valid - cy) / fy
-
-        # Apply depth (mathematically equivalent for both interpretations)
+        # Unproject to 3D coordinates
+        x = (u_valid - cx) * depth_valid / fx
+        y = (v_valid - cy) * depth_valid / fy
         z = depth_valid
-        x = x_normalized * z
-        y = y_normalized * z
-
-        # Stack into pointcloud
-        pointcloud = np.stack([x, y, z], axis=1).astype(np.float32)
 
         # Stack into pointcloud
         pointcloud = np.stack([x, y, z], axis=1).astype(np.float32)
