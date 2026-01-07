@@ -190,12 +190,18 @@ class Pipeline:
                         self.rerun_logger.log_frame(current_data, "frame")
                     elif isinstance(current_data, Masks):
                         self.rerun_logger.log_masks(current_data, f"{node.name}/masks")
+                    elif isinstance(current_data, tuple) and len(current_data) > 0:
+                        # Handle tuple output from nodes (Frame, ground_truth, obj_ids)
+                        if isinstance(current_data[0], Frame):
+                            self.rerun_logger.log_frame(current_data[0], "frame")
                     elif hasattr(current_data, "__iter__") and not isinstance(
-                        current_data, (str, bytes)
+                        current_data, (str, bytes, tuple)
                     ):
-                        logger.debug(f"logging a buffer, frame ids: {[f.idx for f in current_data]}")
-                        for f in current_data:
-                            if isinstance(f, Frame):
+                        # Handle list/iterable of frames
+                        frame_items = [f for f in current_data if isinstance(f, Frame)]
+                        if frame_items:
+                            logger.debug(f"logging a buffer, frame ids: {[f.idx for f in frame_items]}")
+                            for f in frame_items:
                                 self.rerun_logger.log_frame(f, "frame")
 
             item_runtime = time.time() - start_time

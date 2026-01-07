@@ -117,7 +117,7 @@ def test_depth_to_pointcloud_node():
 
     assert isinstance(result, Frame)
     assert result.pointcloud is not None
-    assert result.pointcloud.shape[1] == 3  # 3D points
+    assert result.pointcloud.points.shape[1] == 3  # 3D points
 
 
 def test_mesh_sampling_node():
@@ -178,7 +178,7 @@ def test_pipeline_processing():
     assert isinstance(result, Frame)
     assert result.depth is not None
     assert result.pointcloud is not None
-    assert result.pointcloud.shape[1] == 3
+    assert result.pointcloud.points.shape[1] == 3
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 
 from ..core.node import Node
-from ..interfaces import Frame
+from ..interfaces import Frame, PointCloud
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,7 @@ class DepthToPointCloudNode(Node):
 
     def __init__(self, max_depth: float = 10.0, min_depth: float = 0.1,
                  exclude_classes: list[str] = [],
+                 include_classes: list[str] | None = None,
                  **kwargs):
         """
         Initialize depth to pointcloud node.
@@ -33,12 +34,26 @@ class DepthToPointCloudNode(Node):
             max_depth: Maximum depth value to consider (meters)
             min_depth: Minimum depth value to consider (meters)
             exclude_classes: List of class names to exclude from pointcloud generation (if masks are available)
+                            Can also be a comma-separated string that will be split into a list
+            include_classes: If provided, only include points from masks with these class names (whitelist)
+                            Can also be a comma-separated string that will be split into a list
             **kwargs: Additional configuration
         """
         super().__init__(**kwargs)
         self.max_depth = max_depth
         self.min_depth = min_depth
-        self.exclude_classes = exclude_classes
+        
+        # Handle string input for exclude_classes (comma-separated)
+        if isinstance(exclude_classes, str):
+            self.exclude_classes = [c.strip() for c in exclude_classes.split(",")]
+        else:
+            self.exclude_classes = exclude_classes
+            
+        # Handle string input for include_classes (comma-separated)
+        if isinstance(include_classes, str):
+            self.include_classes = [c.strip() for c in include_classes.split(",")]
+        else:
+            self.include_classes = include_classes
 
     def process(
         self, frame: Frame | list[Frame] | Generator[Frame, None, None]
@@ -76,8 +91,8 @@ class DepthToPointCloudNode(Node):
         if frame.depth is None:
             raise ValueError("Input frame must contain depth image")
 
-        if self.exclude_classes and frame.masks is None:
-            raise ValueError("To exclude classes the input frame should contain masks")
+        if (self.exclude_classes or self.include_classes) and frame.masks is None:
+            raise ValueError("To filter by classes, the input frame should contain masks")
 
         if frame.intrinsics is None:
             # Use default intrinsics if not provided
@@ -90,21 +105,41 @@ class DepthToPointCloudNode(Node):
         else:
             intrinsics = frame.intrinsics
 
-        # If masks are available and exclude_classes is set, create a mask to filter points
-        if self.exclude_classes and frame.masks is not None:
-            combined_mask = np.ones(frame.depth.shape, dtype=bool)
-
-            #reshape masks if needed
-            if frame.masks.masks[0].shape != frame.depth.shape:
-                resized_masks = []
-                for mask in frame.masks.masks:
-                    resized_mask = cv2.resize(mask.astype(np.uint8), (frame.depth.shape[1], frame.depth.shape[0]), interpolation=cv2.INTER_NEAREST)
-                    resized_masks.append(resized_mask.astype(bool))
-                frame.masks.masks = np.array(resized_masks)
-
-            if frame.masks.class_names is None:
-                raise ValueError("Masks must have class_names to exclude classes")
+        # If masks are available and filtering is enabled, create a mask to filter points
+        if (self.exclude_classes or self.include_classes) and frame.masks is not None:
+            # Verify depth exists before trying to resize masks
+            if frame.depth is None:
+                logger.warning("Depth is None but masks are present. Skipping mask filtering.")
+                combined_mask = None
             else:
+                # Start with no points included if using whitelist, all points if using blacklist
+                if self.include_classes is not None:
+                    combined_mask = np.zeros(frame.depth.shape, dtype=bool)
+                else:
+                    combined_mask = np.ones(frame.depth.shape, dtype=bool)
+
+                # Reshape masks if needed
+                if frame.masks.masks[0].shape != frame.depth.shape:
+                    resized_masks = []
+                    for mask in frame.masks.masks:
+                        resized_mask = cv2.resize(mask.astype(np.uint8), (frame.depth.shape[1], frame.depth.shape[0]), interpolation=cv2.INTER_NEAREST)
+                        resized_masks.append(resized_mask.astype(bool))
+                    frame.masks.masks = np.array(resized_masks)
+
+                if frame.masks.class_names is None:
+                    raise ValueError("Masks must have class_names to filter by classes")
+
+                # Apply whitelist (include only specified classes)
+                if self.include_classes is not None:
+                    for mask, class_name in zip(frame.masks.masks, frame.masks.class_names):
+                        if class_name in self.include_classes:
+                            combined_mask |= mask.astype(bool)
+                    logger.info(
+                        f"Including only classes {self.include_classes} in pointcloud, total included points: {np.sum(combined_mask)}"
+                    )
+
+            # Apply blacklist (exclude specified classes)
+            if self.exclude_classes:
                 for mask, class_name in zip(frame.masks.masks, frame.masks.class_names):
                     if class_name in self.exclude_classes:
                         combined_mask &= ~mask.astype(bool)
@@ -126,13 +161,12 @@ class DepthToPointCloudNode(Node):
             f"Generated pointcloud with {len(pointcloud)} points"
         )
 
-        frame.pointcloud = pointcloud
+        frame.pointcloud = PointCloud(points=pointcloud, colors=colors)
 
         frame.metadata["pointcloud_method"] = "depth_unprojection"
         frame.metadata["pointcloud_size"] = (
             len(pointcloud) if pointcloud is not None else 0
         )
-        frame.metadata["pointcloud_colors"] = colors
 
         return frame
 
